@@ -1,7 +1,7 @@
 // Bidou : le code de l'appli.
 'use strict';
 /* =================== Constantes =================== */
-const APP_VER='bidou-v4';
+const APP_VER='bidou-v5';
 const DAYS=[['lun','Lundi'],['mar','Mardi'],['mer','Mercredi'],['jeu','Jeudi'],['ven','Vendredi'],['sam','Samedi'],['dim','Dimanche']];
 const SLOTS=[['pdj','Petit-déj'],['midi','Déjeuner'],['gouter','Goûter'],['soir','Dîner']];
 const SI=b=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${b}</svg>`;
@@ -75,7 +75,34 @@ const ALLERGENS=[
 ];
 const ALLERGEN_LABEL=Object.fromEntries(ALLERGENS.map(a=>[a[0],a[1]]));
 const DIETS=['végétarien','pescétarien','sans gluten','sans lactose','sans porc','halal'];
-const LEVELS=[['debutant','Débutant'],['a-laise',"À l'aise"],['confirme','Confirmé']];
+const LEVELS=[['debutant','Je débute','Des recettes simples, expliquées pas à pas','🐣'],['a-laise','Je me débrouille','Je connais les bases (cuire, émincer, assaisonner)','🧑‍🍳'],['confirme','J’adore cuisiner','Des techniques et des plats plus élaborés','🔪']];
+const DISLIKE_GROUPS=[['Légumes',['champignons','poivron','aubergine','courgette','chou-fleur','brocoli','épinards','céleri','fenouil','betterave','endive','avocat','olives']],
+ ['Saveurs',['coriandre','câpres','oignon cru','ail','piment','cumin','noix de coco']],
+ ['Viandes, poissons & co',['poisson','fruits de mer','porc','agneau','abats','tofu']],
+ ['Fromages',['chèvre','fromage bleu']]];
+const DISLIKE_EMOJI={coriandre:'🌿',champignons:'🍄',poivron:'🫑',aubergine:'🍆',courgette:'🥒','chou-fleur':'☁️',brocoli:'🥦','épinards':'🍃','céleri':'🥬',fenouil:'🌱',betterave:'🟣',endive:'🥗',olives:'🫒','câpres':'🟢','oignon cru':'🧅',ail:'🧄',piment:'🌶️',poisson:'🐟','fruits de mer':'🦐',porc:'🐖',agneau:'🐑',abats:'🫀',tofu:'🧊','chèvre':'🐐','fromage bleu':'🧀',avocat:'🥑','noix de coco':'🥥',cumin:'🫙'};
+const ALLERGEN_EMOJI={gluten:'🌾',crustaces:'🦐',oeufs:'🥚',poisson:'🐟',arachides:'🥜',soja:'🫘',lait:'🥛','fruits-coque':'🌰',celeri:'🥬',moutarde:'🟡',sesame:'⚪',sulfites:'🍷',lupin:'🌼',mollusques:'🦪'};
+const DIET_EMOJI={'végétarien':'🥕','pescétarien':'🐟','sans gluten':'🌾','sans lactose':'🥛','sans porc':'🐖','halal':'🌙'};
+/* Photos des cuisines : Wikimedia Commons, licences libres (crédits dans Moi › Crédits photos). */
+const WMT='https://thumb.wikimedia.org/wikipedia/commons/thumb/',WMC='https://commons.wikimedia.org/wiki/File:';
+const CUISINE_IMG={
+ tout:['4/4e/Spices_market_Medenine.jpg','Spices_market_Medenine.jpg','Marché aux épices','Bernard Gagnon','CC BY-SA 3.0'],
+ fr:['b/b3/B%C5%93uf_bourguignon_06.JPG','B%C5%93uf_bourguignon_06.JPG','Bœuf bourguignon','Arnaud 25','CC BY-SA 4.0'],
+ it:['4/46/Pizza-napoletana.jpg','Pizza-napoletana.jpg','Pizza napolitaine','Fabryx98','CC BY-SA 4.0'],
+ es:['8/85/2012_Pa%C3%ABlla_Andalusia_Spain.jpg','2012_Pa%C3%ABlla_Andalusia_Spain.jpg','Paella','Jebulon','CC0'],
+ gr:['5/54/Flickr_-_cyclonebill_-_Gr%C3%A6sk_salat.jpg','Flickr_-_cyclonebill_-_Gr%C3%A6sk_salat.jpg','Salade grecque','cyclonebill','CC BY-SA 2.0'],
+ ma:['5/5a/Moroccan_tajine_with_meat.jpg','Moroccan_tajine_with_meat.jpg','Tajine','Marco Almbauer','CC BY-SA 4.0'],
+ lb:['9/94/Lebanon%2C_Baalbek%2C_Lebanese_Hummus.jpg','Lebanon%2C_Baalbek%2C_Lebanese_Hummus.jpg','Houmous','Vyacheslav Argenberg','CC BY 4.0'],
+ in:['f/fd/Chicken_tikka_masala.jpg','Chicken_tikka_masala.jpg','Poulet tikka masala','Michael Hays','CC BY 2.0'],
+ th:['3/39/Phat_Thai_kung_Chang_Khien_street_stall.jpg','Phat_Thai_kung_Chang_Khien_street_stall.jpg','Pad thaï','Takeaway','CC BY-SA 3.0'],
+ vn:['9/96/Pho-Beef-Noodle-Soup-2008.jpg','Pho-Beef-Noodle-Soup-2008.jpg','Phở bò','Kham Tran','CC BY-SA 3.0'],
+ jp:['2/28/Ramen_Jump_002.jpg','Ramen_Jump_002.jpg','Ramen','Ocdp','CC0'],
+ kr:['f/f5/Korean.food-Bibimbap-02.jpg','Korean.food-Bibimbap-02.jpg','Bibimbap','abex','CC BY-SA 2.0'],
+ cn:['3/35/2019-02-22_Xiaolongbao_in_%22Taste_Of_Shanghai%22_restaurant%2C_Sydney%2C_Australia.jpg','2019-02-22_Xiaolongbao_in_%22Taste_Of_Shanghai%22_restaurant%2C_Sydney%2C_Australia.jpg','Xiaolongbao','Maksym Kozlenko','CC BY-SA 4.0'],
+ mx:['7/73/001_Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg','001_Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg','Tacos','Larry Miller','CC BY-SA 2.0'],
+ us:['3/36/Cheeseburgers_and_french_fries.jpg','Cheeseburgers_and_french_fries.jpg','Cheeseburger & frites','jeffreyw','CC BY 2.0'],
+ af:['0/01/Jollof_rice_and_Dodo.jpg','Jollof_rice_and_Dodo.jpg','Riz jollof & alloco','Skarfmacaronne','CC BY-SA 4.0']};
+const cuisineImg=id=>{const x=CUISINE_IMG[id];return x?WMT+x[0]+'/500px-'+x[1]:''};
 const AUDACE=[['classique','Classique','des recettes familières et réconfortantes, bien exécutées'],['audace',"Un peu d'audace",'des classiques revisités avec une touche originale (une épice, une association inattendue, une technique simple qui change tout)'],['surprise','Surprends-moi',"des recettes vraiment originales : cuisines du monde, associations que je n'aurais pas eu l'idée de faire, tout en restant faisables à la maison"]];
 const MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const SEASON=[
@@ -229,34 +256,36 @@ const eur=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).fo
 function mins(m){m=Math.round(m||0);if(m<60)return m+' min';const h=Math.floor(m/60),r=m%60;return h+' h'+(r?' '+String(r).padStart(2,'0'):'')}
 function frac(x){const w=Math.floor(x+1e-9),f=Math.round((x-w)*4)/4;const F={0.25:'¼',0.5:'½',0.75:'¾'};if(f===0)return String(w);if(f===1)return String(w+1);return (w?w+' ':'')+F[f]}
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{if(v===''||v==null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){}}};
-function dayLabel(k){const[d,s]=k.split('-');return (DAYS.find(x=>x[0]===d)||[,''])[1]+' · '+String((SLOTS.find(x=>x[0]===s)||[,''])[1]).toLowerCase()}
+const W2='w2:',weekOf=k=>k.startsWith(W2)?2:1,baseDay=d=>String(d).replace(W2,'');
+function dayLabel(k){const[d,s]=k.split('-');return (DAYS.find(x=>x[0]===baseDay(d))||[,''])[1]+(weekOf(k)===2?' (sem. 2)':'')+' · '+String((SLOTS.find(x=>x[0]===s)||[,''])[1]).toLowerCase()}
 const month=()=>new Date().getMonth()+1;
 const inSeason=r=>!!r&&(r.season===true||(r.months||[]).includes(month()));
 
 /* =================== Données =================== */
 const ALLDAYS=DAYS.map(d=>d[0]);
 function defaultMeals(){return{pdj:{days:[],mode:'express'},midi:{days:['sam','dim'],mode:'normal'},gouter:{days:[],mode:'express'},soir:{days:ALLDAYS.slice(),mode:'normal'}}}
-function computePlan(p){const plan={};for(const[d]of DAYS)for(const[s]of SLOTS){const m=p.meals[s];plan[d+'-'+s]=m.days.includes(d)?((p.weekendLong&&(d==='sam'||d==='dim')&&(s==='midi'||s==='soir'))?'long':m.mode):'off'}return plan}
+function computePlan(p){const plan={};for(const[d]of DAYS)for(const[s]of SLOTS){const m=p.meals[s];plan[d+'-'+s]=m.days.includes(d)?((p.weekendLong&&(d==='sam'||d==='dim')&&(s==='midi'||s==='soir'))?'long':m.mode):'off'}if(p.weeks===2)for(const k of Object.keys(plan))plan[W2+k]=plan[k];return plan}
 function defaultPlan(){return computePlan({meals:defaultMeals(),weekendLong:true})}
 function defaultProfile(){return{setup:false,household:1,level:'a-laise',gear:['plaques','four','micro-ondes'],cuisines:['fr','it','jp'],likes:'',dislikes:[],diet:[],allergens:[],meals:defaultMeals(),weekendLong:true,
-  plan:defaultPlan(),season:true,useMine:true,budgetOn:false,budget:50,calOn:false,kcal:2400,theme:'auto'}}
+  plan:defaultPlan(),weeks:1,season:true,useMine:true,budgetOn:false,budget:50,calOn:false,kcal:2400,theme:'auto'}}
 function weekFromPlan(plan){const slots={};for(const k in plan)slots[k]={mode:plan[k],recipe:null,pinned:false,portions:null};return{createdAt:null,envies:'',audace:'audace',slots}}
 function norm(d){
   d=d&&typeof d==='object'?d:{};
   const hadMeals=!!(d.profile&&d.profile.meals);const p=Object.assign(defaultProfile(),d.profile||{});p.plan=Object.assign(defaultPlan(),p.plan||{});
   if(!hadMeals&&d.profile&&d.profile.plan){for(const[s]of SLOTS){const days=ALLDAYS.filter(x=>p.plan[x+'-'+s]&&p.plan[x+'-'+s]!=='off');const modes=days.map(x=>p.plan[x+'-'+s]);p.meals[s]={days,mode:modes.sort((a,b)=>modes.filter(v=>v===b).length-modes.filter(v=>v===a).length)[0]||p.meals[s].mode}}}
   for(const[s]of SLOTS){p.meals[s]=Object.assign({days:[],mode:'express'},p.meals[s]||{})}
+  p.weeks=p.weeks===2?2:1;p.plan=computePlan(p);p.budget=Math.min(300,Math.max(10,+p.budget||50));p.kcal=Math.min(4000,Math.max(1200,+p.kcal||2400));
   p.gear=(p.gear||[]).filter(g=>GEAR.includes(g));p.allergens=Array.isArray(p.allergens)?p.allergens:[];
   p.cuisines=[...new Set((p.cuisines||[]).flatMap(c=>OLD_CUISINES[c]||[c]).filter(c=>c==='tout'||CUISINE_LABEL[c]))];
   const w=d.week&&d.week.slots?d.week:weekFromPlan(p.plan);
-  const base=weekFromPlan(p.plan).slots;for(const k in base){w.slots[k]=Object.assign(base[k],w.slots[k]||{})}
+  const base=weekFromPlan(p.plan).slots;for(const k in base){w.slots[k]=Object.assign(base[k],w.slots[k]||{})}for(const k in w.slots){if(!base[k])delete w.slots[k]}
   return{profile:p,week:w,favs:Array.isArray(d.favs)?d.favs:[],mine:Array.isArray(d.mine)?d.mine:[],
     shop:Object.assign({checked:{},extra:[],hideDone:false},d.shop||{})};
 }
 let D=norm((()=>{try{return JSON.parse(LS.get('bidou_d')||'null')}catch(e){return null}})());
-const UI={day:DAYS[(new Date().getDay()+6)%7][0],ob:0,carnetTab:'mine',ideas:(()=>{try{return JSON.parse(LS.get('bidou_ideas')||'[]')}catch(e){return[]}})(),ideaForm:{envie:'',use:'',mode:'normal',audace:'audace'},gen:null,busy:{},sheet:null,authMode:'signup',authErr:'',screen:null,install:null};
+const UI={day:DAYS[(new Date().getDay()+6)%7][0],wk:1,shopWk:0,ob:0,carnetTab:'mine',ideas:(()=>{try{return JSON.parse(LS.get('bidou_ideas')||'[]')}catch(e){return[]}})(),ideaForm:{envie:'',use:'',mode:'normal',audace:'audace'},gen:null,busy:{},sheet:null,authMode:'signup',authErr:'',screen:null,install:null};
 function save(){LS.set('bidou_d',JSON.stringify(D));markDirty()}
-function applyPlan(){const p=D.profile;p.plan=computePlan(p);for(const k in p.plan){const s=D.week.slots[k];if(s&&!s.recipe)s.mode=p.plan[k]}save();render()}
+function applyPlan(){const p=D.profile;p.plan=computePlan(p);for(const k in p.plan){const s=D.week.slots[k];if(!s)D.week.slots[k]={mode:p.plan[k],recipe:null,pinned:false,portions:null};else if(!s.recipe)s.mode=p.plan[k]}for(const k in D.week.slots){if(!(k in p.plan))delete D.week.slots[k]}save();render()}
 const activeSlots=()=>Object.keys(D.week.slots).filter(k=>D.week.slots[k].mode!=='off');
 const portionsOf=k=>D.week.slots[k].portions||D.profile.household;
 const mealKcal=(s='soir')=>Math.round(D.profile.kcal*(SLOT_SHARE[s]||.3)/10)*10;
@@ -360,7 +389,7 @@ function profileText(seasonOn){const p=D.profile;const lvl=(LEVELS.find(l=>l[0]=
     `- Niveau en cuisine : ${lvl}`,`- Cuisines appréciées : ${p.cuisines.includes('tout')||!p.cuisines.length?'toutes : il est curieux et veut découvrir des cuisines du monde entier':p.cuisines.map(c=>CUISINE_LABEL[c]).join(', ')}`,p.likes?`- Ce qu'il aime : ${p.likes}`:'',
     `- À EXCLURE ABSOLUMENT (n'aime pas) : ${p.dislikes.join(', ')||'rien de particulier'}`,`- Régime / contraintes à respecter strictement : ${p.diet.join(', ')||'aucun, mange de tout'}`,
     p.allergens.length?`- ALLERGIES (danger : exclure absolument tout ingrédient qui en contient, y compris sauces et produits transformés) : ${p.allergens.map(a=>ALLERGEN_LABEL[a]).join(', ')}`:'',
-    p.budgetOn?`- Budget : environ ${p.budget} € de courses pour toute la semaine pour ${p.household} personne(s)`:'- Budget : pas de contrainte stricte, reste raisonnable',
+    p.budgetOn?`- Budget : environ ${p.budget} € de courses par semaine pour ${p.household} personne(s)`:'- Budget : pas de contrainte stricte, reste raisonnable',
     p.calOn?`- Objectif : environ ${p.kcal} kcal par jour (petit-déjeuner ≈ ${mealKcal('pdj')}, déjeuner ≈ ${mealKcal('midi')}, goûter ≈ ${mealKcal('gouter')}, dîner ≈ ${mealKcal('soir')} kcal par portion)`:"- Pas d'objectif calorique : portions normales, rassasiantes et équilibrées",
     seasonOn?`- DE SAISON (${MONTHS[month()-1]}) : construis les recettes autour des fruits et légumes de saison en France ce mois-ci : ${SEASON[month()-1]}. Mets "season": true quand la recette met en avant un produit de saison.`:''
   ].filter(Boolean).join('\n')}
@@ -393,7 +422,7 @@ ${mine.length?`\nSES RECETTES PERSO : tu peux en placer au plus 2 si elles colle
 
 ${RULES()}
 - Petit-déjeuner et goûter : des recettes adaptées à ce moment (pas un plat de dîner), simples et équilibrées.
-- Sur la semaine (déjeuners et dîners) : varie les protéines (volaille, poisson 1 à 2 fois, œufs, légumineuses, viande rouge au plus 1 fois), les cuisines et les textures. Jamais deux fois le même plat.
+- Sur la période (déjeuners et dîners) : varie les protéines (volaille, poisson 1 à 2 fois, œufs, légumineuses, viande rouge au plus 1 fois), les cuisines et les textures. Jamais deux fois le même plat.
 - Mutualise les ingrédients frais entre les recettes pour limiter le gaspillage et le coût.
 
 FORMAT : réponds uniquement par un objet JSON, une entrée par créneau, dans l'ordre :
@@ -479,16 +508,16 @@ function shopQty(q,u){
   return nf1.format(q)+' '+u}
 function ingQty(i,por){const u=normUnit(i.u),q=(+i.q||0)*por;if(!q)return'';
   if(u==='g'||u==='ml')return q>=1000?nf1.format(q/1000)+(u==='g'?' kg':' L'):nf0.format(q)+' '+u;if(u==='pièce')return frac(q);return frac(q)+' '+u}
-function shoppingList(){const map=new Map();
-  for(const k of activeSlots()){const s=D.week.slots[k];if(!s.recipe)continue;const por=portionsOf(k);
+function shoppingList(wk=0){const map=new Map(),keys=activeSlots().filter(k=>!wk||weekOf(k)===wk);
+  for(const k of keys){const s=D.week.slots[k];if(!s.recipe)continue;const por=portionsOf(k);
     for(const i of s.recipe.ing||[]){const[q,u]=toBase(i.q,normUnit(i.u));const name=String(i.n||'').trim();if(!name)continue;
       const key=name.toLowerCase().split(/\s+/).map(w=>w.replace(/[sx]$/,'')).join(' ')+'|'+u;
       const staple=!!i.p||STAPLE_WORDS.some(w=>name.toLowerCase().startsWith(w));
       if(!map.has(key))map.set(key,{key,name,u,q:0,r:RAYONS.includes(i.r)?i.r:'Autre',staple,uses:new Set()});
       const it=map.get(key);it.q+=q*por;it.uses.add(s.recipe.name);if(!staple)it.staple=false}}
-  const cost=sum(activeSlots().filter(k=>D.week.slots[k].recipe).map(k=>(D.week.slots[k].recipe.cost||0)*portionsOf(k)));
+  const cost=sum(keys.filter(k=>D.week.slots[k].recipe).map(k=>(D.week.slots[k].recipe.cost||0)*portionsOf(k)));
   return{items:[...map.values()],cost}}
-function listText(){const{items}=shoppingList();const main=items.filter(i=>!i.staple&&!D.shop.checked[i.key]);const out=['Courses Bidou',''];
+function listText(){const{items}=shoppingList(D.profile.weeks===2?UI.shopWk:0);const main=items.filter(i=>!i.staple&&!D.shop.checked[i.key]);const out=['Courses Bidou',''];
   for(const r of RAYONS){const l=main.filter(i=>i.r===r);if(!l.length)continue;out.push(r);l.forEach(i=>out.push('- '+i.name+' : '+shopQty(i.q,i.u)));out.push('')}
   const ex=D.shop.extra.filter(e=>!e.done);if(ex.length){out.push('Autres');ex.forEach(e=>out.push('- '+e.text));out.push('')}
   const st=items.filter(i=>i.staple&&!D.shop.checked[i.key]);if(st.length){out.push('À vérifier dans les placards');st.forEach(i=>out.push('- '+i.name))}
@@ -515,6 +544,7 @@ function parseIngLine(line,portions){
 function modeFor(total){return total<=20?'express':total<=45?'normal':'long'}
 
 /* =================== Rendu =================== */
+const shownOnce=new Set();function toastOnce(m){if(shownOnce.has(m))return;shownOnce.add(m);toast(m)}
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3600)}
 document.addEventListener('click',e=>{if(e.target.id==='toast')e.target.hidden=true});
 const TABS=[['semaine','Semaine',I.cal],['courses','Courses',I.cart],['idees','Idées',I.spark],['carnet','Carnet',I.book],['moi','Moi',I.user]];
@@ -526,7 +556,7 @@ function render(){
   else if(sc==='onboard')app.innerHTML=vOnboard();
   else if(sc==='auth')app.innerHTML=vAuth();
   else{const t=tab();app.innerHTML=(t==='semaine'?vWeek():t==='courses'?vShop():t==='idees'?vIdeas():t==='carnet'?vCarnet():vMe())+vTabbar()}
-  renderSheet()}
+  renderSheet();initDials()}
 function softRender(){const a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')&&a.closest('#app'))return;render()}
 function vTabbar(){const t=tab();const n=shoppingList().items.filter(i=>!i.staple&&!D.shop.checked[i.key]).length+D.shop.extra.filter(e=>!e.done).length;
   return`<nav class="tabbar" aria-label="Sections"><div class="wrap">${TABS.map(([id,l,ic])=>`<a href="#${id}" ${t===id?'aria-current="page"':''}><span class="ic">${ic}</span>${l}${id==='courses'&&n?`<span class="count num">${n}</span>`:''}</a>`).join('')}</div></nav>`}
@@ -552,7 +582,12 @@ const ICO={
 
 /* ---- accueil ---- */
 function vWelcome(){return`<div class="screen welcome gutter"><div class="wrap">
-  <div class="hero"><div class="logo-big">${logo(150)}</div><h1>Bidou</h1><p class="tagline">Tes repas de la semaine, au temps que tu as.</p></div>
+  <div class="hero"><div class="logo-big">${logo(130)}</div><h1>Bidou</h1><p class="tagline">Tes repas de la semaine et ta liste de courses, en un geste.</p></div>
+  <ol class="howto">
+    <li><span class="hemo">🗓️</span><span><b>Tu choisis tes repas</b>Sur 1 ou 2 semaines : 14 ou 28 repas, à ton rythme.</span></li>
+    <li><span class="hemo">✨</span><span><b>Bidou propose les recettes</b>Selon tes goûts, ton matériel et ton temps.</span></li>
+    <li><span class="hemo">🛒</span><span><b>Ta liste de courses est prête</b>Triée par rayon, à cocher au magasin.</span></li>
+  </ol>
   ${installHint()}
   <div class="stack"><button class="btn primary block" data-act="start">Commencer</button>
   ${SB.on()?`<button class="btn ghost block" data-act="goLogin">J’ai déjà un compte</button>`:''}</div></div></div>`}
@@ -569,9 +604,11 @@ function tagInput(field,list,ph){return`<div class="chips">${list.map((t,i)=>`<s
 function householdEditor(){const n=D.profile.household;
   return`<div class="people" aria-hidden="true">${Array.from({length:Math.min(n,8)},()=>`<span>${ICO.person}</span>`).join('')}${n>8?`<b>+${n-8}</b>`:''}</div>
   <div class="big-stepper"><div class="stepper"><button data-act="household" data-d="-1" aria-label="Une personne de moins">−</button><span class="num">${n}</span><button data-act="household" data-d="1" aria-label="Une personne de plus">+</button></div></div>
-  <div class="seg full" role="group" aria-label="Niveau en cuisine">${LEVELS.map(([id,l])=>`<button data-act="level" data-val="${id}" aria-pressed="${D.profile.level===id}">${l}</button>`).join('')}</div>`}
+  <h3 class="sec-sub">En cuisine, tu…</h3>
+  <div class="levels" role="group" aria-label="Niveau en cuisine">${LEVELS.map(([id,l,d,e])=>`<button class="lvl" data-act="level" data-val="${id}" aria-pressed="${D.profile.level===id}"><span class="emo" aria-hidden="true">${e}</span><span class="lt"><b>${l}</b><span>${d}</span></span></button>`).join('')}</div>`}
+function weeksSeg(cls=''){const w=D.profile.weeks;return`<div class="seg full ${cls}" role="group" aria-label="Durée du planning"><button data-act="weeks" data-val="1" aria-pressed="${w===1}">1 semaine</button><button data-act="weeks" data-val="2" aria-pressed="${w===2}">2 semaines</button></div>`}
 function mealsEditor(){const m=D.profile.meals;
-  return`<div class="stack">${SLOTS.map(([s,l])=>{const on=m[s].days;return`<div class="mealrow ${on.length?'on':''}">
+  return`<div class="stack">${weeksSeg()}<p class="muted center">${mealCount()} repas ${D.profile.weeks===2?'sur 2 semaines':'par semaine'}</p>${SLOTS.map(([s,l])=>{const on=m[s].days;return`<div class="mealrow ${on.length?'on':''}">
     <button class="mealhead" data-act="mealAll" data-slot="${s}" aria-pressed="${on.length>0}"><span class="mic">${SLOT_ICON[s]}</span><b>${l}</b><span class="cnt num">${on.length?on.length+' j':'—'}</span></button>
     <div class="daydots">${DAYS.map(([d,dl])=>`<button class="dd" data-act="mealDay" data-slot="${s}" data-day="${d}" aria-pressed="${on.includes(d)}" aria-label="${l} ${dl}">${dl.slice(0,2)}</button>`).join('')}</div></div>`}).join('')}</div>`}
 function timeEditor(){const p=D.profile,act=SLOTS.filter(([s])=>p.meals[s].days.length);
@@ -581,23 +618,30 @@ function timeEditor(){const p=D.profile,act=SLOTS.filter(([s])=>p.meals[s].days.
     ${act.some(([s])=>s==='midi'||s==='soir')?`<label class="switchrow"><span class="mic">${ICO.sun}</span><b>Plus de temps le week-end</b><input type="checkbox" data-act="weekendLong" ${p.weekendLong?'checked':''}></label>`:''}</div>`}
 function gearEditor(){const p=D.profile;return`<div class="tiles">${GEAR_LIST.map(([id,l,ic])=>`<button class="tile" data-act="toggleArr" data-field="gear" data-val="${esc(id)}" aria-pressed="${p.gear.includes(id)}">${ic}<span>${l}</span></button>`).join('')}</div>`}
 function cuisineEditor(){const p=D.profile,all=p.cuisines.includes('tout');
-  return`<div class="cuisines">${[['tout','Tout, je suis curieux',''],...CUISINES].map(([id,l,flag])=>`<button class="cuisine${id==='tout'?' wide':''}" data-act="cuisine" data-val="${id}" aria-pressed="${id==='tout'?all:(!all&&p.cuisines.includes(id))}"><span class="pat pat-${id}" aria-hidden="true"></span>${flag?`<span class="flag">${flag}</span>`:''}<span class="cn">${l}</span><span class="ck" aria-hidden="true">✓</span></button>`).join('')}</div>`}
+  return`<div class="cuisines">${[['tout','Tout, je suis curieux'],...CUISINES].map(([id,l])=>`<button class="cuisine${id==='tout'?' wide':''}" data-act="cuisine" data-val="${id}" aria-pressed="${id==='tout'?all:(!all&&p.cuisines.includes(id))}"><img src="${cuisineImg(id)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"><span class="cn">${l}</span><span class="ck" aria-hidden="true">✓</span></button>`).join('')}</div>`}
 function likesField(id){return`<textarea id="${id}" data-bind="profile.likes" rows="2" aria-label="Ce que tu adores" placeholder="Tu adores… (fromage, épicé, croquant)">${esc(D.profile.likes)}</textarea>`}
 function dislikeEditor(){const p=D.profile,custom=p.dislikes.filter(d=>!DISLIKES.includes(d));
-  return`<div class="chips">${DISLIKES.map(d=>`<button class="chip no" data-act="toggleArr" data-field="dislikes" data-val="${esc(d)}" aria-pressed="${p.dislikes.includes(d)}">${esc(d)}</button>`).join('')}</div>
-  ${tagInput('dislikesCustom',custom,'Autre chose…')}`}
+  return`${DISLIKE_GROUPS.map(([g,list])=>`<h3 class="sec-sub">${g}</h3><div class="chips">${list.map(d=>`<button class="chip no" data-act="toggleArr" data-field="dislikes" data-val="${esc(d)}" aria-pressed="${p.dislikes.includes(d)}"><span class="emo" aria-hidden="true">${DISLIKE_EMOJI[d]||'•'}</span>${esc(d)}</button>`).join('')}</div>`).join('')}
+  <h3 class="sec-sub">Autre chose ?</h3>${tagInput('dislikesCustom',custom,'Ex. : betterave crue')}`}
 function allergyEditor(){const p=D.profile;
-  return`<div class="tiles al">${ALLERGENS.map(([id,l])=>`<button class="tile allergen" data-act="toggleArr" data-field="allergens" data-val="${id}" aria-pressed="${p.allergens.includes(id)}"><span class="warn-ic" aria-hidden="true">!</span><span>${l}</span></button>`).join('')}</div>
-  <div class="chips">${DIETS.map(d=>`<button class="chip" data-act="toggleArr" data-field="diet" data-val="${esc(d)}" aria-pressed="${p.diet.includes(d)}">${esc(d)}</button>`).join('')}</div>
+  return`<div class="algs">${ALLERGENS.map(([id,l])=>`<button class="alg" data-act="toggleArr" data-field="allergens" data-val="${id}" aria-pressed="${p.allergens.includes(id)}"><span class="emo" aria-hidden="true">${ALLERGEN_EMOJI[id]||'•'}</span><span>${l}</span></button>`).join('')}</div>
+  <h3 class="sec-sub">Régime</h3>
+  <div class="chips">${DIETS.map(d=>`<button class="chip" data-act="toggleArr" data-field="diet" data-val="${esc(d)}" aria-pressed="${p.diet.includes(d)}"><span class="emo" aria-hidden="true">${DIET_EMOJI[d]||''}</span>${esc(d)}</button>`).join('')}</div>
   ${tagInput('allergies',p.diet.filter(d=>!DIETS.includes(d)),'Autre contrainte…')}`}
+function dial(field,val,min,max,step,unit,per){const f=(val-min)/(max-min);
+  return`<div class="dial" data-dial="${field}" data-min="${min}" data-max="${max}" data-step="${step}" data-unit="${unit}">
+    <svg viewBox="0 0 200 200" role="slider" tabindex="0" aria-valuemin="${min}" aria-valuemax="${max}" aria-valuenow="${val}" aria-label="${unit} ${per}">
+      <circle class="dtrack" cx="100" cy="100" r="80"/><circle class="dfill" cx="100" cy="100" r="80"/><circle class="dknob" r="14" cx="100" cy="100"/></svg>
+    <div class="dval"><span><b class="num">${val}</b><small>${unit} ${per}</small></span></div>
+    <div class="dctl"><button class="dstep" data-act="dialStep" data-field="${field}" data-d="-1" aria-label="Moins">−</button><span class="muted">Glisse le rond</span><button class="dstep" data-act="dialStep" data-field="${field}" data-d="1" aria-label="Plus">+</button></div></div>`}
 function optionsEditor(){const p=D.profile;
   return`<div class="stack">
-    <label class="switchrow"><span class="mic">${I.leaf}</span><b>De saison</b><input type="checkbox" data-act="opt" data-field="season" ${p.season?'checked':''}></label>
-    <label class="switchrow"><span class="mic">${I.book}</span><b>Mes recettes dans la semaine</b><input type="checkbox" data-act="opt" data-field="useMine" ${p.useMine?'checked':''}></label>
-    <label class="switchrow"><span class="mic">${ICO.euro}</span><b>Budget par semaine</b><input type="checkbox" data-act="opt" data-field="budgetOn" ${p.budgetOn?'checked':''}></label>
-    ${p.budgetOn?`<div class="row sub-opt"><input type="number" min="10" step="5" id="budget" data-bind="profile.budget" value="${p.budget}" aria-label="Budget en euros"><span class="muted">€ / semaine</span></div>`:''}
-    <label class="switchrow"><span class="mic">${ICO.flame}</span><b>Objectif de calories</b><input type="checkbox" data-act="opt" data-field="calOn" ${p.calOn?'checked':''}></label>
-    ${p.calOn?`<div class="row sub-opt"><input type="number" min="1200" step="50" id="kcal" data-bind="profile.kcal" value="${p.kcal}" aria-label="Calories par jour"><span class="muted">kcal / jour</span></div>`:''}
+    <label class="switchrow"><span class="emo-ic" aria-hidden="true">🍂</span><b>De saison</b><input type="checkbox" data-act="opt" data-field="season" ${p.season?'checked':''}></label>
+    <label class="switchrow"><span class="emo-ic" aria-hidden="true">📒</span><b>Mes recettes dans le planning</b><input type="checkbox" data-act="opt" data-field="useMine" ${p.useMine?'checked':''}></label>
+    <label class="switchrow"><span class="emo-ic" aria-hidden="true">💶</span><b>Budget courses</b><input type="checkbox" data-act="opt" data-field="budgetOn" ${p.budgetOn?'checked':''}></label>
+    ${p.budgetOn?dial('budget',p.budget,10,300,5,'€','/ semaine'):''}
+    <label class="switchrow"><span class="emo-ic" aria-hidden="true">🔥</span><b>Objectif de calories</b><input type="checkbox" data-act="opt" data-field="calOn" ${p.calOn?'checked':''}></label>
+    ${p.calOn?dial('kcal',p.kcal,1200,4000,50,'kcal','/ jour'):''}
   </div>`}
 function themeEditor(){return`<div class="seg full" role="group" aria-label="Apparence">${[['auto','Auto'],['light','Clair'],['dark','Sombre']].map(([id,l])=>`<button data-act="theme" data-val="${id}" aria-pressed="${D.profile.theme===id}">${l}</button>`).join('')}</div>`}
 
@@ -651,34 +695,48 @@ function progressHTML(){const g=UI.gen;if(!g)return'';const pct=g.n?Math.min(100
   return`<div class="progress" id="gen-progress"><div class="bar ${g.n?'':'indet'}"><span style="width:${pct}%"></span></div><span class="num">${label}</span><button class="btn small" data-act="stop">Arrêter</button></div>`}
 function updateProgress(n){if(!UI.gen||n===UI.gen.n)return;UI.gen.n=n;const el=document.getElementById('gen-progress');if(el)el.outerHTML=progressHTML()}
 const AUDACE_SHORT={classique:'Classique',audace:'Audacieux',surprise:'Surprenant'};
+const mealCount=()=>activeSlots().length;
 function vWeek(){const w=D.week,p=D.profile,act=activeSlots(),filled=act.filter(k=>w.slots[k].recipe);
-  const cost=sum(filled.map(k=>(w.slots[k].recipe.cost||0)*portionsOf(k)));
-  const toGen=act.filter(k=>!w.slots[k].pinned).length,g=UI.gen,d=UI.day,dl=(DAYS.find(x=>x[0]===d)||DAYS[0])[1];
-  const ks=SLOTS.map(([s])=>d+'-'+s),on=ks.filter(k=>w.slots[k].mode!=='off'),off=ks.filter(k=>w.slots[k].mode==='off');
-  return band(`<div class="between"><h1>Ta semaine</h1><span class="pill num">${act.length} repas${cost?' · ≈ '+eur(cost):''}</span></div>
-    <div class="row nowrap"><input type="text" id="envies" data-bind="week.envies" value="${esc(w.envies||'')}" placeholder="Une envie ? (thaï, réconfort…)" aria-label="Tes envies cette semaine" enterkeyhint="go">
-    <button class="btn dark" data-act="generate" ${g||!toGen?'disabled':''}>${I.spark}<span>Générer</span></button></div>
-    <div class="row quick"><span class="qchip">${ICO.users}<span class="stepper mini"><button data-act="household" data-d="-1" aria-label="Une personne de moins">−</button><span class="num">${p.household}</span><button data-act="household" data-d="1" aria-label="Une personne de plus">+</button></span></span>
-      <button class="qchip" data-act="season" aria-pressed="${p.season}">${I.leaf}<span>Saison</span></button>
-      <button class="qchip" data-act="audaceCycle" aria-label="Originalité : ${AUDACE_SHORT[w.audace||'audace']}">${I.spark}<span>${AUDACE_SHORT[w.audace||'audace']}</span></button></div>
+  const g=UI.gen,two=p.weeks===2,wk=two?UI.wk:1,pre=wk===2?W2:'',d=UI.day,dl=(DAYS.find(x=>x[0]===d)||DAYS[0])[1];
+  const toGen=act.filter(k=>!w.slots[k].pinned).length,missing=act.filter(k=>!w.slots[k].recipe).length;
+  const shop=shoppingList(),nItems=shop.items.filter(i=>!i.staple).length;
+  const complete=act.length&&!missing,cta=!filled.length?`Générer mes ${act.length} repas`:missing?`Compléter les ${missing} repas`:'Tout régénérer';
+  const ks=SLOTS.map(([s])=>pre+d+'-'+s).filter(k=>w.slots[k]),on=ks.filter(k=>w.slots[k].mode!=='off'),off=ks.filter(k=>w.slots[k].mode==='off');
+  const prefs=[w.envies?'« '+w.envies+' »':'',p.season?'De saison':'',AUDACE_SHORT[w.audace||'audace']].filter(Boolean).join(' · ');
+  return band(`<h1>${two?'Tes 2 semaines':'Ta semaine'}</h1>
+    <div class="plan">
+      ${weeksSeg('onband')}
+      <button class="plan-sum" data-act="openEdit" data-sec="meals"><span><b class="num">${act.length}</b> repas · <b class="num">${p.household}</b> pers.</span><span class="plan-edit">Modifier ›</span></button>
+      ${complete&&!g?`<a class="btn dark block big" href="#courses">${I.cart}<span>Voir mes courses · ${nItems} articles</span></a>`:`<button class="btn dark block big" data-act="generate" ${g||!toGen?'disabled':''}>${I.spark}<span>${cta}</span></button>`}
+      <button class="prefs" data-act="prefsSheet"><span class="emo" aria-hidden="true">🎛️</span><span class="pt">${esc(prefs)}</span><span class="plan-edit">Envies ›</span></button>
+    </div>
     ${g&&g.kind==='week'?progressHTML():''}`,'compact')+
   `<main class="gutter"><div class="wrap stack">
-    <div class="daystrip" role="tablist" aria-label="Jours">${DAYS.map(([x,l])=>{const k2=SLOTS.map(([s])=>x+'-'+s).filter(k=>w.slots[k].mode!=='off');
+    <ol class="flow">
+      <li class="done"><button data-act="openEdit" data-sec="meals"><span class="femo">🗓️</span><b>Repas</b><span>${act.length} prévus</span></button></li>
+      <li class="${complete?'done':'cur'}"><button data-act="generate" ${g||!toGen?'disabled':''} aria-label="${complete?'Tout régénérer':cta}"><span class="femo">✨</span><b>Recettes</b><span class="num">${complete?'Tout régénérer':filled.length+' / '+act.length}</span></button></li>
+      <li class="${filled.length?'cur':''}"><a href="#courses"><span class="femo">🛒</span><b>Courses</b><span>${nItems?nItems+' articles':'—'}</span></a></li>
+    </ol>
+    ${complete?'':filled.length?`<a class="shopcta" href="#courses"><span class="femo">🛒</span><span><b>Ma liste de courses</b><span class="num">${nItems} articles · ≈ ${eur(shop.cost)}</span></span>${ICO.chev}</a>`:
+      `<div class="card hint"><p>Appuie sur <b>${cta}</b> : Bidou choisit les recettes, puis ta liste de courses se remplit toute seule.</p></div>`}
+    ${two?`<div class="seg full wksel" role="tablist" aria-label="Semaine affichée"><button role="tab" data-act="wk" data-val="1" aria-selected="${wk===1}" aria-pressed="${wk===1}">Semaine 1</button><button role="tab" data-act="wk" data-val="2" aria-selected="${wk===2}" aria-pressed="${wk===2}">Semaine 2</button></div>`:''}
+    <div class="daystrip" role="tablist" aria-label="Jours">${DAYS.map(([x,l])=>{const k2=SLOTS.map(([s])=>pre+x+'-'+s).filter(k=>w.slots[k]&&w.slots[k].mode!=='off');
       return`<button role="tab" class="dpill" data-act="day" data-day="${x}" aria-selected="${x===d}"><b>${l.slice(0,3)}</b><span class="dots">${k2.map(k=>`<i class="${w.slots[k].recipe?'full':''}"></i>`).join('')||'<i class="none"></i>'}</span></button>`}).join('')}</div>
-    <h2 class="dayname">${dl}</h2>
+    <h2 class="dayname">${dl}${two?` <small class="muted">· semaine ${wk}</small>`:''}</h2>
     ${on.length?on.map(mealCard).join(''):`<div class="card empty-state"><p>Pas de repas prévu.</p></div>`}
     ${off.length?`<div class="addmeals">${off.map(k=>{const s=k.split('-')[1];return`<button class="chip" data-act="timeSheet" data-slot="${k}">${I.plus}${(SLOTS.find(x=>x[0]===s)||[])[1]}</button>`}).join('')}</div>`:''}
-    <button class="btn block subtle" data-act="newWeek">${I.refresh} Nouvelle semaine</button>
+    <button class="btn block subtle" data-act="newWeek">${I.refresh} Repartir de zéro</button>
   </div></main>`}
 
 /* ---- courses ---- */
 function itemRow(it){const done=!!D.shop.checked[it.key];if(done&&D.shop.hideDone)return'';
   return`<li><label class="item ${done?'done':''}"><input type="checkbox" data-act="check" data-key="${esc(it.key)}" ${done?'checked':''}><span class="nm">${esc(it.name)}</span><span class="q num">${esc(shopQty(it.q,it.u))}</span></label></li>`}
-function vShop(){const{items,cost}=shoppingList(),extra=D.shop.extra;
+function vShop(){const two=D.profile.weeks===2,{items,cost}=shoppingList(two?UI.shopWk:0),extra=D.shop.extra;
   const main=items.filter(i=>!i.staple),stap=items.filter(i=>i.staple),left=main.filter(i=>!D.shop.checked[i.key]).length+extra.filter(e=>!e.done).length;
   const groups=RAYONS.map(r=>[r,main.filter(i=>i.r===r).sort((a,b)=>a.name.localeCompare(b.name,'fr'))]).filter(g=>g[1].length);
   return band(`<div class="between"><h1>Courses</h1><span class="pill num">${left} · ≈ ${eur(cost)}</span></div>
-    <div class="row quick"><button class="qchip dark" data-act="shareList">${I.share}<span>Partager</span></button><button class="qchip" data-act="hideDone" aria-pressed="${D.shop.hideDone}">${I.close.replace('stroke-width="2.4"','stroke-width="2"')}<span>Masquer pris</span></button></div>`,'compact')+
+    <div class="row quick"><button class="qchip dark" data-act="shareList">${I.share}<span>Partager</span></button><button class="qchip" data-act="hideDone" aria-pressed="${D.shop.hideDone}">${I.close.replace('stroke-width="2.4"','stroke-width="2"')}<span>Masquer pris</span></button></div>
+    ${two?`<div class="seg full onband" role="group" aria-label="Quelle semaine">${[[0,'Tout'],[1,'Semaine 1'],[2,'Semaine 2']].map(([v,l])=>`<button data-act="shopWk" data-val="${v}" aria-pressed="${UI.shopWk===v}">${l}</button>`).join('')}</div>`:''}`,'compact')+
   `<main class="gutter"><div class="wrap stack">
     <form class="row nowrap" data-form="extra"><input type="text" id="extra-input" placeholder="Ajouter (café, lessive…)" aria-label="Ajouter un article" enterkeyhint="done"><button class="btn primary" type="submit" aria-label="Ajouter">${I.plus}</button></form>
     ${!items.length&&!extra.length?`<div class="card empty-state"><h3>Liste vide</h3><a class="btn primary" href="#semaine">Planifier ma semaine</a></div>`:''}
@@ -688,7 +746,7 @@ function vShop(){const{items,cost}=shoppingList(),extra=D.shop.extra;
   </div></main>`}
 
 /* ---- idées ---- */
-function slotOptions(){return`<option value="">Ajouter à…</option>`+DAYS.map(([d,l])=>`<optgroup label="${l}">${SLOTS.map(([s,sl])=>{const k=d+'-'+s,x=D.week.slots[k];return`<option value="${k}">${l} · ${sl.toLowerCase()}${x.recipe&&x.mode!=='off'?' (remplace)':''}</option>`}).join('')}</optgroup>`).join('')}
+function slotOptions(){const wks=D.profile.weeks===2?[['',' (sem. 1)'],[W2,' (sem. 2)']]:[['','']];return`<option value="">Ajouter à…</option>`+wks.map(([pre,suf])=>DAYS.map(([d,l])=>`<optgroup label="${l}${suf}">${SLOTS.map(([s,sl])=>{const k=pre+d+'-'+s,x=D.week.slots[k];return x?`<option value="${k}">${l}${suf} · ${sl.toLowerCase()}${x.recipe&&x.mode!=='off'?' (remplace)':''}</option>`:''}).join('')}</optgroup>`).join('')).join('')}
 function rcard(r,type,i){return`<article class="card rcard"><button class="meal-open" data-act="openList" data-type="${type}" data-i="${i}"><span class="meal-name">${esc(r.name)}</span><span class="meal-meta num">${esc(meta(r))}</span></button>
   <div class="meal-foot"><span class="tags"><span class="tag ${esc(r.mode)}">${esc(MODES[r.mode]?.short||'')}</span>${tagsFor(r)}</span>
   <span class="meal-acts"><button class="icon-btn fav ${isFav(r)?'on':''}" data-act="favList" data-type="${type}" data-i="${i}" aria-label="Favori">${I.heart}</button></span></div>
@@ -716,21 +774,25 @@ function vCarnet(){const t=UI.carnetTab,list=t==='mine'?D.mine:D.favs;
 
 /* ---- moi : un menu, chaque réglage s’ouvre en plein écran ---- */
 const SECTIONS={
-  table:['À table',ICO.users,householdEditor],
-  meals:['Mes repas',I.cal,()=>mealsEditor()+'<h3 class="sec-sub">Temps</h3>'+timeEditor()],
-  gear:['Mon matériel',ICO.pot,gearEditor],
-  cuisines:['Mes cuisines',ICO.globe,()=>cuisineEditor()+likesField('likes2')],
-  dislikes:['Je n’aime pas',ICO.no,dislikeEditor],
-  allergies:['Allergies et régime',ICO.alert,allergyEditor],
-  options:['Options',ICO.sliders,optionsEditor],
-  theme:['Apparence',ICO.moon,themeEditor]};
+  table:['À table','👥',householdEditor],
+  meals:['Mes repas','🗓️',()=>mealsEditor()+'<h3 class="sec-sub">Temps</h3>'+timeEditor()],
+  gear:['Matériel','🍳',gearEditor],
+  cuisines:['Cuisines','🌍',()=>cuisineEditor()+likesField('likes2')],
+  dislikes:['Je n’aime pas','🙅',dislikeEditor],
+  allergies:['Allergies','⚠️',allergyEditor],
+  options:['Options','🎚️',optionsEditor],
+  theme:['Apparence','🌗',themeEditor],
+  credits:['Crédits photos','📷',creditsView]};
+const ME_GROUPS=[['Mon foyer',['table','meals','gear']],['Mes goûts',['cuisines','dislikes','allergies']],['Réglages',['options','theme','credits']]];
+function creditsView(){return`<p class="muted">Photos des cuisines du monde : Wikimedia Commons, sous licence libre.</p><div class="menu card">${Object.entries(CUISINE_IMG).map(([id,x])=>`<a class="menurow" href="${WMC+x[1]}" target="_blank" rel="noopener"><span class="mt"><b>${esc(x[2])}</b><span class="muted">${esc(x[3])} · ${esc(x[4])}</span></span>${ICO.chev}</a>`).join('')}</div>`}
 function secSummary(id){const p=D.profile;
   if(id==='table')return`${p.household} pers. · ${(LEVELS.find(l=>l[0]===p.level)||LEVELS[1])[1]}`;
-  if(id==='meals')return SLOTS.filter(([s])=>p.meals[s].days.length).map(([s,l])=>`${l} ${p.meals[s].days.length} j`).join(' · ')||'Aucun';
+  if(id==='credits')return'Wikimedia';
+  if(id==='meals')return`${mealCount()} repas${p.weeks===2?' · 2 sem.':''}`;
   if(id==='gear')return`${p.gear.length} équipement${p.gear.length>1?'s':''}`;
   if(id==='cuisines')return p.cuisines.includes('tout')?'Tout':p.cuisines.map(c=>CUISINE_LABEL[c]).slice(0,3).join(', ')+(p.cuisines.length>3?'…':'')||'—';
   if(id==='dislikes')return p.dislikes.length?`${p.dislikes.length} ingrédient${p.dislikes.length>1?'s':''}`:'Rien';
-  if(id==='allergies')return p.allergens.length?p.allergens.map(a=>ALLERGEN_LABEL[a]).join(', '):'Aucune';
+  if(id==='allergies')return p.allergens.length?p.allergens.map(a=>ALLERGEN_LABEL[a]).join(', '):p.diet.length?p.diet.join(', '):'Aucune';
   if(id==='options')return[p.season?'Saison':'',p.budgetOn?p.budget+' €':'',p.calOn?p.kcal+' kcal':''].filter(Boolean).join(' · ')||'—';
   if(id==='theme')return{auto:'Auto',light:'Clair',dark:'Sombre'}[p.theme]||'Auto'}
 function vMe(){const x=SB.sess();
@@ -739,8 +801,8 @@ function vMe(){const x=SB.sess();
     <div class="card account">${!SB.on()?`<span class="avatar">${ICO.person}</span><p class="muted">Données sur cet appareil.</p>`:
       x?`<span class="avatar">${esc((x.email||'?')[0].toUpperCase())}</span><div class="acc-txt"><b>${esc(x.email||'')}</b><span class="muted">Sauvegardé</span></div><button class="btn small" data-act="accountSheet">Gérer</button>`:
       `<span class="avatar">${ICO.person}</span><div class="acc-txt"><b>Pas connecté</b><span class="muted">Pour sauvegarder</span></div><button class="btn primary small" data-act="goLogin">Se connecter</button>`}</div>
-    <nav class="menu card" aria-label="Réglages">${Object.entries(SECTIONS).map(([id,[t,ic]])=>`<button class="menurow" data-act="openEdit" data-sec="${id}"><span class="mic">${ic}</span><span class="mt"><b>${t}</b><span class="muted">${esc(secSummary(id))}</span></span>${ICO.chev}</button>`).join('')}</nav>
-    ${standalone()?'':`<nav class="menu card"><button class="menurow" data-act="installSheet"><span class="mic">${ICO.phone}</span><span class="mt"><b>Installer l’appli</b><span class="muted">Sur l’écran d’accueil</span></span>${ICO.chev}</button></nav>`}
+    ${ME_GROUPS.map(([g,ids])=>`<section class="mgroup" aria-label="${g}"><h2 class="section-title">${g}</h2><div class="mtiles">${ids.map(id=>{const[t,e]=SECTIONS[id];return`<button class="mtile" data-act="openEdit" data-sec="${id}"><span class="memo" aria-hidden="true">${e}</span><b>${t}</b><span class="muted">${esc(secSummary(id))}</span></button>`}).join('')}</div></section>`).join('')}
+    ${standalone()?'':`<button class="mtile wide" data-act="installSheet"><span class="memo" aria-hidden="true">📲</span><b>Installer l’appli</b><span class="muted">Sur l’écran d’accueil</span></button>`}
     <p class="muted" style="text-align:center;font-size:12px">Bidou · ${APP_VER}</p>
   </div></main>`}
 
@@ -759,6 +821,11 @@ function renderSheet(){const box=$('#sheet'),s=UI.sheet;if(!s){box.hidden=true;b
     <div class="row" style="justify-content:flex-end"><button class="btn" data-act="closeSheet">Annuler</button><button class="btn primary" data-act="confirmYes">${esc(s.yes)}</button></div></div></div>`;
   else if(s.type==='time'){const cur=D.week.slots[s.slot].mode;html=`<div class="sheet-wrap modal" data-act="sheetBg"><div class="panel"><div class="between"><h2>${esc(dayLabel(s.slot))}</h2><button class="icon-btn" data-act="closeSheet" aria-label="Fermer">${I.close}</button></div>
     <div class="timeopts big">${MODE_KEYS.map(m=>`<button class="topt" data-act="setTime" data-mode="${m}" data-tone="${m}" aria-pressed="${cur===m}">${MODE_ICON[m]}<b>${m==='off'?'Aucun':MODES[m].short}</b><span>${m==='off'?'Pas de repas':MODES[m].label}</span></button>`).join('')}</div></div></div>`}
+  else if(s.type==='prefs'){const w=D.week,p=D.profile;html=`<div class="sheet-wrap modal" data-act="sheetBg"><div class="panel"><div class="between"><h2>Envies</h2><button class="icon-btn" data-act="closeSheet" aria-label="Fermer">${I.close}</button></div>
+    <label class="lbl" for="envies">Une envie particulière ?</label><input type="text" id="envies" data-bind="week.envies" value="${esc(w.envies||'')}" placeholder="Thaï, réconfortant, léger…" enterkeyhint="done">
+    <label class="switchrow"><span class="emo-ic" aria-hidden="true">🍂</span><b>Produits de saison</b><input type="checkbox" data-act="opt" data-field="season" ${p.season?'checked':''}></label>
+    <span class="lbl">Originalité</span><div class="levels">${AUDACE.map(([id,l])=>`<button class="lvl" data-act="audace" data-val="${id}" aria-pressed="${(w.audace||'audace')===id}"><span class="emo" aria-hidden="true">${{classique:'🍲',audace:'🌶️',surprise:'🎲'}[id]}</span><span class="lt"><b>${l}</b><span>${{classique:'Des plats familiers et réconfortants',audace:'Des classiques avec une touche nouvelle',surprise:'Des recettes du monde, inattendues'}[id]}</span></span></button>`).join('')}</div>
+    <button class="btn primary block" data-act="closeSheet">OK</button></div></div>`}
   else if(s.type==='edit'){const[t,,ed]=SECTIONS[s.sec];html=`<div class="sheet-wrap" role="dialog" aria-modal="true" aria-label="${esc(t)}"><header class="band gutter compact"><div class="wrap"><div class="between"><button class="icon-btn" data-act="closeSheet" aria-label="Retour" style="background:var(--band-soft);color:inherit">${I.back}</button><h1 style="font-size:24px">${esc(t)}</h1><span style="width:42px"></span></div></div></header>
     <main class="gutter" style="padding-bottom:32px"><div class="wrap stack">${ed()}<button class="btn primary block" data-act="closeSheet">Terminé</button></div></main></div>`}
   else if(s.type==='account'){const x=SB.sess()||{};html=`<div class="sheet-wrap modal" data-act="sheetBg"><div class="panel"><div class="between"><h2>Mon compte</h2><button class="icon-btn" data-act="closeSheet" aria-label="Fermer">${I.close}</button></div>
@@ -770,7 +837,7 @@ function renderSheet(){const box=$('#sheet'),s=UI.sheet;if(!s){box.hidden=true;b
   else if(s.type==='copy')html=`<div class="sheet-wrap modal" data-act="sheetBg"><div class="panel"><div class="between"><h2>Ta liste</h2><button class="icon-btn" data-act="closeSheet" aria-label="Fermer">${I.close}</button></div><textarea id="copy-area" rows="14" readonly>${esc(s.text)}</textarea></div></div>`;
   const old=box.querySelector('.sheet-wrap'),same=old&&box.dataset.key===sheetKey(s),top=same?old.scrollTop:0;
   box.innerHTML=html;box.hidden=false;box.dataset.key=sheetKey(s);document.body.style.overflow='hidden';
-  const nw=box.querySelector('.sheet-wrap');if(nw&&top)nw.scrollTop=top}
+  const nw=box.querySelector('.sheet-wrap');if(nw&&top)nw.scrollTop=top;initDials()}
 function sheetKey(s){return[s.type,s.slot||'',s.i==null?'':s.i,s.sec||''].join(':')}
 function vRecipe(r,s){const por=s.type==='slot'?portionsOf(s.slot):(s.portions||D.profile.household);
   return`<div class="sheet-wrap" role="dialog" aria-modal="true" aria-labelledby="r-title">
@@ -826,29 +893,50 @@ function vEditor(s){const r=s.draft;const ingText=(r.ing||[]).map(i=>{const q=in
   </form>`}
   </div></main></div>`}
 
+/* =================== Jauge ronde (budget, calories) =================== */
+const DIAL_C=2*Math.PI*80;
+function paintDial(el,v){const min=+el.dataset.min,max=+el.dataset.max,f=Math.max(0,Math.min(1,(v-min)/(max-min))),a=(135+f*270)*Math.PI/180;
+  const fill=el.querySelector('.dfill'),knob=el.querySelector('.dknob');
+  el.querySelector('.dtrack').setAttribute('stroke-dasharray',`${DIAL_C*.75} ${DIAL_C}`);fill.setAttribute('stroke-dasharray',`${DIAL_C*.75*f} ${DIAL_C}`);
+  knob.setAttribute('cx',(100+80*Math.cos(a)).toFixed(1));knob.setAttribute('cy',(100+80*Math.sin(a)).toFixed(1));
+  el.querySelector('.dval b').textContent=v;el.querySelector('svg').setAttribute('aria-valuenow',v)}
+function setDial(el,v,commit){const min=+el.dataset.min,max=+el.dataset.max,st=+el.dataset.step;v=Math.max(min,Math.min(max,Math.round(v/st)*st));
+  D.profile[el.dataset.dial]=v;paintDial(el,v);if(commit)save()}
+function initDials(){document.querySelectorAll('.dial').forEach(el=>{paintDial(el,+D.profile[el.dataset.dial]);if(el.dataset.on)return;el.dataset.on='1';
+  const svg=el.querySelector('svg');let drag=false;
+  const at=e=>{const r=svg.getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;let deg=Math.atan2(y,x)*180/Math.PI;let rel=(deg-135+720)%360;if(rel>270)rel=rel>315?0:270;
+    const min=+el.dataset.min,max=+el.dataset.max;setDial(el,min+rel/270*(max-min),false)};
+  svg.addEventListener('pointerdown',e=>{drag=true;svg.setPointerCapture(e.pointerId);at(e);e.preventDefault()});
+  svg.addEventListener('pointermove',e=>{if(drag)at(e)});
+  const end=()=>{if(drag){drag=false;save()}};svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+  svg.addEventListener('keydown',e=>{const d=e.key==='ArrowRight'||e.key==='ArrowUp'?1:e.key==='ArrowLeft'||e.key==='ArrowDown'?-1:0;if(d){e.preventDefault();setDial(el,+D.profile[el.dataset.dial]+d*+el.dataset.step,true)}})})}
+
 /* =================== Actions =================== */
 async function generateWeek(){const keys=activeSlots().filter(k=>!D.week.slots[k].pinned);if(!keys.length){toast('Choisis au moins un repas à générer.');return}
   const ctl=new AbortController();UI.gen={kind:'week',n:0,total:keys.length,ctl};render();
-  try{const text=await askChef(weekPrompt(keys),{signal:ctl.signal,max:14000,onText:t=>updateProgress(Math.min(keys.length,countNames(t)))});
-    const res=parseJSON(text),arr=Array.isArray(res)?res:(res&&res.meals)||[];let ok=0;
-    keys.forEach((k,i)=>{const raw=arr.find(m=>m&&m.slot===k)||arr[i];
-      if(raw&&raw.mine){const m=D.mine.find(x=>x.id===raw.mine);if(m){D.week.slots[k].recipe=clone(m);ok++;return}}
-      const r=cleanRecipe(raw,D.week.slots[k].mode);if(r){D.week.slots[k].recipe=r;ok++}});
+  const batches=[];for(let i=0;i<keys.length;i+=14)batches.push(keys.slice(i,i+14));let ok=0,done=0;
+  try{for(const b of batches){
+      const text=await askChef(weekPrompt(b),{signal:ctl.signal,max:14000,onText:t=>updateProgress(Math.min(keys.length,done+countNames(t)))});
+      const res=parseJSON(text),arr=Array.isArray(res)?res:(res&&res.meals)||[];
+      b.forEach((k,i)=>{const raw=arr.find(m=>m&&m.slot===k)||arr[i];
+        if(raw&&raw.mine){const m=D.mine.find(x=>x.id===raw.mine);if(m){D.week.slots[k].recipe=clone(m);ok++;return}}
+        const r=cleanRecipe(raw,D.week.slots[k].mode);if(r){D.week.slots[k].recipe=r;ok++}});
+      done+=b.length;save()}
     if(!ok)throw{code:'invalid_json'};
-    toast(ok<keys.length?`${ok} repas sur ${keys.length} générés.`:'Ta semaine est prête !');finishWeek()}
-  catch(e){if(e&&e.code==='cancelled'){}else if(e&&FALLBACK.includes(e.code)){fillFromLibrary(keys);finishWeek();toast(chefErr(e))}else toast(chefErr(e))}
+    toast(ok<keys.length?`${ok} repas sur ${keys.length} générés.`:'C’est prêt ! Ta liste de courses aussi.');finishWeek()}
+  catch(e){if(e&&e.code==='cancelled'){}else if(e&&FALLBACK.includes(e.code)){fillFromLibrary(keys.filter(k=>!D.week.slots[k].recipe||!ok));finishWeek();toastOnce(chefErr(e))}else toast(chefErr(e))}
   finally{UI.gen=null;render()}}
 function finishWeek(){D.week.createdAt=new Date().toISOString();D.shop.checked={};save()}
 async function replaceSlot(k){if(UI.busy[k])return;UI.busy[k]=true;if(UI.sheet&&UI.sheet.slot===k)closeSheet();render();
   try{const text=await askChef(replacePrompt(k),{max:4000});const raw=parseJSON(text);const r=cleanRecipe(Array.isArray(raw)?raw[0]:(raw&&raw.recipe)||raw,D.week.slots[k].mode);
     if(!r)throw{code:'invalid_json'};D.week.slots[k].recipe=r;save()}
-  catch(e){if(e&&FALLBACK.includes(e.code)){const avoid=activeSlots().filter(x=>D.week.slots[x].recipe).map(x=>D.week.slots[x].recipe.name);const r=libPick(D.week.slots[k].mode,avoid,kindOf(k));if(r){D.week.slots[k].recipe=r;save()}toast(chefErr(e))}else if(!e||e.code!=='cancelled')toast(chefErr(e))}
+  catch(e){if(e&&FALLBACK.includes(e.code)){const avoid=activeSlots().filter(x=>D.week.slots[x].recipe).map(x=>D.week.slots[x].recipe.name);const r=libPick(D.week.slots[k].mode,avoid,kindOf(k));if(r){D.week.slots[k].recipe=r;save()}toastOnce(chefErr(e))}else if(!e||e.code!=='cancelled')toast(chefErr(e))}
   finally{delete UI.busy[k];render()}}
 async function findIdeas(){const ctl=new AbortController();UI.gen={kind:'ideas',n:0,total:3,ctl};render();
   try{const text=await askChef(ideasPrompt(),{signal:ctl.signal,max:9000,onText:t=>updateProgress(Math.min(3,countNames(t)))});
     const res=parseJSON(text),arr=(Array.isArray(res)?res:(res&&res.recipes)||[]).map(o=>cleanRecipe(o,UI.ideaForm.mode)).filter(Boolean);
     if(!arr.length)throw{code:'invalid_json'};UI.ideas=arr;LS.set('bidou_ideas',JSON.stringify(arr))}
-  catch(e){if(e&&FALLBACK.includes(e.code)){let pool=LIB.filter(r=>r.kind==='repas'&&r.mode===UI.ideaForm.mode&&!userAlerts(r).length);UI.ideas=clone(pool.sort(()=>Math.random()-.5).slice(0,3));toast(chefErr(e))}else if(!e||e.code!=='cancelled')toast(chefErr(e))}
+  catch(e){if(e&&FALLBACK.includes(e.code)){let pool=LIB.filter(r=>r.kind==='repas'&&r.mode===UI.ideaForm.mode&&!userAlerts(r).length);UI.ideas=clone(pool.sort(()=>Math.random()-.5).slice(0,3));toastOnce(chefErr(e))}else if(!e||e.code!=='cancelled')toast(chefErr(e))}
   finally{UI.gen=null;render()}}
 async function importPaste(){const s=UI.sheet,txt=($('#paste-text')||{}).value||'';s.paste=txt;if(txt.trim().length<30){toast('Colle une recette un peu plus complète.');return}
   UI.gen={kind:'import',n:0,total:1};renderSheet();
@@ -867,7 +955,7 @@ function toggleFav(r){if(!r)return;const i=D.favs.findIndex(f=>f.name===r.name);
   if(i>=0){D.favs.splice(i,1);toast('Retiré des favoris.')}else{if(D.favs.length>=200){toast('200 favoris maximum.');return}D.favs.unshift(clone(r));toast('Ajouté aux favoris.')}save();render()}
 function addToSlot(r,k){if(!r||!k)return;const s=D.week.slots[k];s.recipe=clone(r);if(s.mode==='off'||r.total>MODES[s.mode].max)s.mode=r.mode;save();toast('Ajouté : '+dayLabel(k)+'.');render()}
 function listItem(type,i){return type==='idea'?UI.ideas[i]:type==='mine'?D.mine[i]:D.favs[i]}
-function newWeek(){const old=D.week;D.profile.plan=computePlan(D.profile);D.week=weekFromPlan(D.profile.plan);for(const k in D.week.slots){if(old.slots[k]&&old.slots[k].pinned&&old.slots[k].recipe&&D.week.slots[k].mode!=='off'){D.week.slots[k].recipe=old.slots[k].recipe;D.week.slots[k].pinned=true}}D.week.audace=old.audace;D.shop.checked={};save();render();toast('Nouvelle semaine prête à générer.')}
+function newWeek(){const old=D.week;UI.wk=1;D.profile.plan=computePlan(D.profile);D.week=weekFromPlan(D.profile.plan);for(const k in D.week.slots){if(old.slots[k]&&old.slots[k].pinned&&old.slots[k].recipe&&D.week.slots[k].mode!=='off'){D.week.slots[k].recipe=old.slots[k].recipe;D.week.slots[k].pinned=true}}D.week.audace=old.audace;D.week.envies=old.envies||'';D.shop.checked={};save();render();toast('Planning remis à zéro.')}
 
 const A={
   start(){UI.screen='onboard';UI.ob=0;render();scrollTo(0,0)},
@@ -901,7 +989,12 @@ const A={
   mode(b){D.week.slots[b.dataset.slot].mode=b.dataset.mode;save();render()},
   audace(b){D.week.audace=b.dataset.val;save();render()},
   season(){D.profile.season=!D.profile.season;save();render()},
-  generate(){generateWeek()},
+  generate(){if(UI.sheet)closeSheet();generateWeek()},
+  weeks(b){D.profile.weeks=+b.dataset.val===2?2:1;if(D.profile.weeks===1){UI.wk=1;UI.shopWk=0}applyPlan()},
+  wk(b){UI.wk=+b.dataset.val===2?2:1;render()},
+  shopWk(b){UI.shopWk=+b.dataset.val||0;render()},
+  prefsSheet(){openSheet({type:'prefs'})},
+  dialStep(b){const el=b.closest('.dial');if(el)setDial(el,(+D.profile[b.dataset.field]||0)+ +b.dataset.d*+el.dataset.step,true)},
   stop(){UI.gen&&UI.gen.ctl&&UI.gen.ctl.abort()},
   open(b){openSheet({type:'slot',slot:b.dataset.slot})},
   pin(b){const s=D.week.slots[b.dataset.slot];s.pinned=!s.pinned;save();render()},
