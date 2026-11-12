@@ -1,9 +1,17 @@
 // Bidou : le code de l'appli.
 'use strict';
 /* =================== Constantes =================== */
-const APP_VER='bidou-v1';
+const APP_VER='bidou-v4';
 const DAYS=[['lun','Lundi'],['mar','Mardi'],['mer','Mercredi'],['jeu','Jeudi'],['ven','Vendredi'],['sam','Samedi'],['dim','Dimanche']];
-const SLOTS=[['midi','Midi'],['soir','Soir']];
+const SLOTS=[['pdj','Petit-déj'],['midi','Déjeuner'],['gouter','Goûter'],['soir','Dîner']];
+const SI=b=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${b}</svg>`;
+const SLOT_ICON={pdj:SI('<path d="M3 18h18M6 18a6 6 0 0 1 12 0"/><path d="M12 7V4M5.6 10.6 4.2 9.2M18.4 10.6l1.4-1.4"/>'),
+  midi:SI('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/>'),
+  gouter:SI('<circle cx="12" cy="12" r="8.5"/><circle cx="9" cy="10" r=".9" fill="currentColor"/><circle cx="14.5" cy="9" r=".9" fill="currentColor"/><circle cx="13.5" cy="14.5" r=".9" fill="currentColor"/><circle cx="9" cy="15" r=".9" fill="currentColor"/>'),
+  soir:SI('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>')};
+const SLOT_PROMPT={pdj:'petit-déjeuner (sucré ou salé, nourrissant, portion de petit-déjeuner)',midi:'déjeuner (plat complet)',gouter:'goûter (petit en-cas, environ 200 à 300 kcal)',soir:'dîner (plat complet)'};
+const SLOT_SHARE={pdj:.25,midi:.35,gouter:.1,soir:.3};
+const MODE_ICON={off:SI('<path d="M6 12h12"/>'),express:SI('<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>'),normal:SI('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M10 3h4"/>'),long:SI('<path d="M4 11h16v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M2 11h2M20 11h2M8 7c0-1 1-1 1-2M12 7c0-1 1-1 1-2M16 7c0-1 1-1 1-2"/>')};
 const MODES={
   off:{label:'—',short:'—',title:'Pas de repas'},
   express:{label:'Express',short:'20 min',title:'Express · 20 min max',max:20,prompt:'EXPRESS : 20 minutes maximum tout compris (préparation + cuisson), très peu de vaisselle'},
@@ -12,8 +20,60 @@ const MODES={
 };
 const MODE_KEYS=['off','express','normal','long'];
 const RAYONS=['Fruits & légumes','Boucherie & poisson','Crèmerie & œufs','Boulangerie','Épicerie salée','Épicerie sucrée','Surgelés','Épices & condiments','Boissons','Autre'];
-const GEAR=['plaques','four','micro-ondes','airfryer','mixeur','cocotte','robot cuiseur','wok','cuiseur vapeur','plancha'];
-const CUISINES=['française','italienne','asiatique','japonaise','indienne','mexicaine','méditerranéenne','libanaise','africaine','américaine'];
+const GI=b=>`<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${b}</svg>`;
+const GEAR_LIST=[
+ ['plaques','Plaques',GI('<rect x="6" y="8" width="36" height="32" rx="4"/><circle cx="17" cy="19" r="5"/><circle cx="31" cy="19" r="5"/><circle cx="17" cy="31" r="4"/><circle cx="31" cy="31" r="4"/>')],
+ ['four','Four',GI('<rect x="6" y="6" width="36" height="36" rx="4"/><path d="M6 15h36"/><circle cx="13" cy="10.5" r="1.4"/><circle cx="20" cy="10.5" r="1.4"/><rect x="12" y="20" width="24" height="16" rx="2"/><path d="M16 25h16"/>')],
+ ['micro-ondes','Micro-ondes',GI('<rect x="4" y="10" width="40" height="28" rx="4"/><rect x="9" y="15" width="22" height="18" rx="2"/><circle cx="37.5" cy="18" r="2"/><path d="M35 26h5M35 30h5"/>')],
+ ['airfryer','Airfryer',GI('<path d="M12 12c0-4 3-6 6-6h12c3 0 6 2 6 6v26a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4z"/><path d="M12 24h24"/><path d="M20 31h8"/><path d="M19 10h10"/>')],
+ ['mixeur','Mixeur',GI('<path d="M14 6h20l-3 22H17z"/><path d="M33 10h5v10h-6"/><rect x="13" y="28" width="22" height="14" rx="3"/><circle cx="24" cy="35" r="2"/>')],
+ ['cocotte','Cocotte',GI('<path d="M8 20h32v12a8 8 0 0 1-8 8H16a8 8 0 0 1-8-8z"/><path d="M4 22h4M40 22h4"/><path d="M10 20c0-4 6-7 14-7s14 3 14 7"/><path d="M22 13v-3h4v3"/>')],
+ ['robot cuiseur','Robot cuiseur',GI('<path d="M10 14h20l-2 16H12z"/><path d="M8 30h30a4 4 0 0 1 4 4v6H8z"/><rect x="30" y="33" width="8" height="4" rx="1"/><path d="M14 10h12"/>')],
+ ['wok','Wok',GI('<path d="M4 22h28c0 8-6 13-14 13S4 30 4 22z"/><path d="M32 23l12-5"/><path d="M14 16c0-3 2-3 2-6M20 16c0-3 2-3 2-6"/>')],
+ ['cuiseur vapeur','Cuiseur vapeur',GI('<rect x="8" y="22" width="32" height="8" rx="2"/><rect x="8" y="32" width="32" height="8" rx="2"/><path d="M12 22c0-5 5-8 12-8s12 3 12 8"/><path d="M18 10c0-2 2-2 2-5M26 10c0-2 2-2 2-5"/>')]
+];
+const GEAR=GEAR_LIST.map(g=>g[0]);
+const STAR=(cx,cy,r,f)=>{let pts=[];for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*0.42:r;pts.push((cx+rr*Math.cos(a)).toFixed(2)+','+(cy+rr*Math.sin(a)).toFixed(2))}return`<polygon points="${pts.join(' ')}" fill="${f}"/>`};
+const FL=b=>`<svg viewBox="0 0 30 20" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${b}</svg>`;
+const V3=(a,b,c)=>FL(`<rect width="10" height="20" fill="${a}"/><rect x="10" width="10" height="20" fill="${b}"/><rect x="20" width="10" height="20" fill="${c}"/>`);
+const H3=(a,b,c)=>FL(`<rect width="30" height="7" fill="${a}"/><rect y="6.6" width="30" height="7" fill="${b}"/><rect y="13.3" width="30" height="6.7" fill="${c}"/>`);
+const CUISINES=[
+ ['fr','Française',V3('#002395','#fff','#ed2939')],
+ ['it','Italienne',V3('#009246','#fff','#ce2b37')],
+ ['es','Espagnole',FL('<rect width="30" height="20" fill="#aa151b"/><rect y="5" width="30" height="10" fill="#f1bf00"/>')],
+ ['gr','Grecque',FL('<rect width="30" height="20" fill="#0d5eaf"/><g fill="#fff"><rect y="2.2" width="30" height="2.2"/><rect y="6.7" width="30" height="2.2"/><rect y="11.1" width="30" height="2.2"/><rect y="15.6" width="30" height="2.2"/></g><rect width="11" height="11" fill="#0d5eaf"/><rect x="4.4" width="2.2" height="11" fill="#fff"/><rect y="4.4" width="11" height="2.2" fill="#fff"/>')],
+ ['ma','Marocaine',FL('<rect width="30" height="20" fill="#c1272d"/>'+STAR(15,10.5,5,'#006233'))],
+ ['lb','Libanaise',FL('<rect width="30" height="20" fill="#fff"/><rect width="30" height="5" fill="#ed1c24"/><rect y="15" width="30" height="5" fill="#ed1c24"/><path d="M15 5.8l4.5 7.4h-9z" fill="#00a651"/><rect x="14.3" y="12.8" width="1.4" height="2" fill="#00a651"/>')],
+ ['in','Indienne',H3('#ff9933','#fff','#138808').replace('</svg>','<circle cx="15" cy="10" r="2.4" fill="none" stroke="#000080" stroke-width=".8"/></svg>')],
+ ['th','Thaïlandaise',FL('<rect width="30" height="20" fill="#a51931"/><rect y="3.3" width="30" height="13.4" fill="#f4f5f8"/><rect y="6.6" width="30" height="6.8" fill="#2d2a4a"/>')],
+ ['vn','Vietnamienne',FL('<rect width="30" height="20" fill="#da251d"/>'+STAR(15,10.5,6,'#ffff00'))],
+ ['jp','Japonaise',FL('<rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="6" fill="#bc002d"/>')],
+ ['kr','Coréenne',FL('<rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="5" fill="#cd2e3a"/><path d="M10 10a5 5 0 0 0 10 0a2.5 2.5 0 0 0-5 0a2.5 2.5 0 0 1-5 0z" fill="#0047a0"/><g stroke="#000" stroke-width="1"><path d="M5 4l3 2M22 4l3-2M5 16l3-2M22 16l3 2"/></g>')],
+ ['cn','Chinoise',FL('<rect width="30" height="20" fill="#de2910"/>'+STAR(6,6,3.5,'#ffde00'))],
+ ['mx','Mexicaine',V3('#006847','#fff','#ce1126').replace('</svg>','<circle cx="15" cy="10" r="2.6" fill="#8c5b2b"/></svg>')],
+ ['us','Américaine',FL('<rect width="30" height="20" fill="#fff"/><g fill="#b22234"><rect width="30" height="1.6"/><rect y="3.1" width="30" height="1.6"/><rect y="6.2" width="30" height="1.6"/><rect y="9.2" width="30" height="1.6"/><rect y="12.3" width="30" height="1.6"/><rect y="15.4" width="30" height="1.6"/><rect y="18.5" width="30" height="1.5"/></g><rect width="13" height="10.8" fill="#3c3b6e"/>')],
+ ['af','Africaine','']
+];
+const CUISINE_LABEL=Object.fromEntries(CUISINES.map(c=>[c[0],c[1]]));
+const OLD_CUISINES={'française':['fr'],'italienne':['it'],'japonaise':['jp'],'indienne':['in'],'mexicaine':['mx'],'libanaise':['lb'],'africaine':['af'],'américaine':['us'],'asiatique':['cn','th','vn'],'méditerranéenne':['gr','es']};
+const DISLIKES=['coriandre','champignons','poivron','aubergine','courgette','chou-fleur','brocoli','épinards','céleri','fenouil','betterave','endive','olives','câpres','oignon cru','ail','piment','poisson','fruits de mer','porc','agneau','abats','tofu','chèvre','fromage bleu','avocat','noix de coco','cumin'];
+const ALLERGENS=[
+ ['gluten','Gluten',/farine(?! de (pois chiches|riz|sarrasin|maïs))|pain|pâtes|pates|spaghetti|tagliatelle|fusilli|penne|rigatoni|linguine|macaroni|coquillette|orzo|crozets|lasagne|nouilles(?! de (riz|patate))|vermicelles(?! de riz)|semoule|boulgour|couscous|tortillas? (de blé|complète)|galettes? (?!de riz)|udon|ramen|soba|biscuit|chapelure|brioche|bagel|muffin|crêpe|brick|raviolis|seigle|orge|avoine|muesli|granola|\bblé|bière|pâte (brisée|feuilletée|sablée|à pizza)|gnocchi|baguette|pita|sauce soja/],
+ ['crustaces','Crustacés',/crevette|homard|langoustine|crabe|gambas|écrevisse|kimchi/],
+ ['oeufs','Œufs',/œuf|oeuf|mayonnaise|brioche|crêpe/],
+ ['poisson','Poisson',/saumon|thon|cabillaud|poisson|anchois|sardine|truite|merlu|nuoc|colin|\bbar\b|dorade|daurade|maquereau|lieu|haddock|morue|kimchi/],
+ ['arachides','Arachides',/cacahu|arachide/],
+ ['soja','Soja',/soja|tofu|edamame|miso|hoisin/],
+ ['lait','Lait',/lait(?! de coco)|beurre(?! de cacahu)|crème|fromage|yaourt|parmesan|mozzarella|feta|comté|emmental|cheddar|ricotta|chèvre|skyr|mascarpone|raclette|reblochon|burrata|halloumi|pecorino|gorgonzola|tomme|manchego|roquefort|crêpe|brioche|pâte (brisée|feuilletée|sablée)/],
+ ['fruits-coque','Fruits à coque',/noix(?! de coco)|noisette|amande|cajou|pistache|pécan|pignon/],
+ ['celeri','Céleri',/céleri/],
+ ['moutarde','Moutarde',/moutarde/],
+ ['sesame','Sésame',/sésame|tahini|houmous|zaatar/],
+ ['sulfites','Sulfites',/\bvin\b|vinaigre|fruits secs|abricots secs|pruneau|raisins secs|cidre/],
+ ['lupin','Lupin',/lupin/],
+ ['mollusques','Mollusques',/moule|calamar|seiche|poulpe|huître|saint-jacques|coque\b/]
+];
+const ALLERGEN_LABEL=Object.fromEntries(ALLERGENS.map(a=>[a[0],a[1]]));
 const DIETS=['végétarien','pescétarien','sans gluten','sans lactose','sans porc','halal'];
 const LEVELS=[['debutant','Débutant'],['a-laise',"À l'aise"],['confirme','Confirmé']];
 const AUDACE=[['classique','Classique','des recettes familières et réconfortantes, bien exécutées'],['audace',"Un peu d'audace",'des classiques revisités avec une touche originale (une épice, une association inattendue, une technique simple qui change tout)'],['surprise','Surprends-moi',"des recettes vraiment originales : cuisines du monde, associations que je n'aurais pas eu l'idée de faire, tout en restant faisables à la maison"]];
@@ -58,7 +118,7 @@ function logo(size){ // logo 6b : bonhomme au bol, avec baguettes
 
 /* =================== Bibliothèque intégrée (exemples et secours sans Claude) =================== */
 const RY={FL:'Fruits & légumes',BP:'Boucherie & poisson',CO:'Crèmerie & œufs',BO:'Boulangerie',ES:'Épicerie salée',EP:'Épicerie sucrée',SU:'Surgelés',EC:'Épices & condiments',BS:'Boissons'};
-function R(o){o.id='lib-'+o.key;o.total=o.prep+o.cook;o.ing=o.ing.map(([n,q,u,r,p])=>({n,q,u,r:RY[r],p:!!p}));o.months=o.months||[];return o}
+function R(o){o.kind=o.kind||'repas';o.id='lib-'+o.key;o.total=o.prep+o.cook;o.ing=o.ing.map(([n,q,u,r,p])=>({n,q,u,r:RY[r],p:!!p}));o.months=o.months||[];return o}
 const LIB=[
 R({key:'nouilles-poulet',name:'Nouilles sautées poulet, brocoli & cacahuètes',desc:'Un wok minute, sucré-salé, croquant.',mode:'express',prep:8,cook:12,diff:'facile',gear:['plaques'],kcal:640,prot:40,carb:70,fat:20,cost:2.9,tags:['asiatique'],months:[9,10,11,12,1,2,3],
  ing:[['nouilles de blé',80,'g','ES'],['blanc de poulet',120,'g','BP'],['brocoli',150,'g','FL'],['carotte',1,'pièce','FL'],['gingembre frais',5,'g','FL'],['ail',1,'gousse','FL'],['cacahuètes grillées',15,'g','ES'],['sauce soja',1.5,'c. à s.','EC',1],['miel',1,'c. à c.','EP',1],['huile neutre',1,'c. à s.','EC',1]],
@@ -112,11 +172,51 @@ R({key:'poulet-roti-epices',name:'Cuisses de poulet rôties aux épices, légume
  ing:[['cuisse de poulet',1,'pièce','BP'],['panais',1,'pièce','FL'],['carotte',1,'pièce','FL'],['pommes de terre',150,'g','FL'],['oignon rouge',0.5,'pièce','FL'],['ail',2,'gousse','FL'],['yaourt grec',50,'g','CO'],['citron',0.5,'pièce','FL'],['paprika',1,'c. à c.','EC',1],['cumin',1,'c. à c.','EC',1],['huile d’olive',1.5,'c. à s.','EC',1]],
  steps:['Préchauffe le four à 200 °C.','Frotte le poulet avec huile, paprika, cumin, sel et poivre.','Coupe les légumes en gros morceaux, mélange-les avec l’huile et l’ail en chemise.','Dispose le poulet sur les légumes et enfourne 55 à 60 min en arrosant à mi-cuisson.','Mélange yaourt, citron et l’ail rôti écrasé pour la sauce.'],
  tip:'Laisse reposer le poulet 5 min avant de servir.'}),
+R({key:'porridge-pomme',kind:'pdj',name:'Porridge pomme-cannelle & noix',desc:'Crémeux, chaud, il cale jusqu’à midi.',mode:'express',prep:3,cook:7,diff:'facile',gear:['plaques'],kcal:420,prot:14,carb:62,fat:12,cost:0.9,tags:['végétarien'],months:[9,10,11,12,1,2,3],
+ ing:[['flocons d’avoine',50,'g','ES'],['lait',200,'ml','CO'],['pomme',1,'pièce','FL'],['cerneaux de noix',10,'g','ES'],['miel',1,'c. à c.','EP',1],['cannelle',1,'pincée','EC',1]],
+ steps:['Chauffe le lait avec les flocons à feu doux, 5 min en remuant.','Ajoute la pomme râpée et la cannelle, 2 min.','Verse dans un bol, ajoute noix concassées et miel.']}),
+R({key:'overnight-oats',kind:'pdj',name:'Overnight oats yaourt, fruits rouges & graines',desc:'Préparé la veille, prêt en sortant du lit.',mode:'express',prep:5,cook:0,diff:'facile',gear:[],kcal:390,prot:18,carb:52,fat:11,cost:1.3,tags:['végétarien','sans cuisson'],
+ ing:[['flocons d’avoine',45,'g','ES'],['yaourt nature',100,'g','CO'],['lait',80,'ml','CO'],['fruits rouges surgelés',80,'g','SU'],['graines de chia',1,'c. à s.','ES'],['miel',1,'c. à c.','EP',1]],
+ steps:['Mélange flocons, yaourt, lait, chia et miel dans un pot.','Ajoute les fruits rouges dessus.','Ferme et laisse une nuit au frais.']}),
+R({key:'tartine-oeuf-avocat',kind:'pdj',name:'Tartine avocat & œuf mollet',desc:'Le petit-déj salé qui donne de l’énergie.',mode:'express',prep:5,cook:6,diff:'facile',gear:['plaques'],kcal:430,prot:18,carb:32,fat:26,cost:1.6,tags:['végétarien'],
+ ing:[['pain complet',2,'tranche','BO'],['avocat',0.5,'pièce','FL'],['œufs',1,'pièce','CO'],['citron',0.25,'pièce','FL'],['graines de sésame',1,'c. à c.','ES']],
+ steps:['Cuis l’œuf 6 min dans l’eau bouillante, passe-le sous l’eau froide.','Grille le pain.','Écrase l’avocat avec citron, sel et poivre, tartine.','Ajoute l’œuf coupé et le sésame.']}),
+R({key:'pancakes-banane',kind:'pdj',name:'Pancakes banane-avoine',desc:'Trois ingrédients, zéro sucre ajouté.',mode:'express',prep:5,cook:10,diff:'facile',gear:['plaques','mixeur'],kcal:410,prot:17,carb:58,fat:12,cost:0.9,tags:['végétarien'],
+ ing:[['banane',1,'pièce','FL'],['œufs',2,'pièce','CO'],['flocons d’avoine',40,'g','ES'],['yaourt nature',60,'g','CO'],['huile neutre',1,'c. à c.','EC',1]],
+ steps:['Mixe banane, œufs et flocons.','Cuis de petites louches 2 min par face dans une poêle huilée.','Sers avec le yaourt.']}),
+R({key:'oeufs-brouilles',kind:'pdj',name:'Œufs brouillés, ciboulette & pain grillé',desc:'Crémeux et protéinés.',mode:'express',prep:3,cook:5,diff:'facile',gear:['plaques'],kcal:400,prot:22,carb:28,fat:22,cost:1.1,tags:['végétarien'],
+ ing:[['œufs',2,'pièce','CO'],['beurre',5,'g','CO'],['ciboulette',0.25,'botte','FL'],['pain de campagne',1,'tranche','BO'],['tomate',1,'pièce','FL']],
+ steps:['Bats les œufs avec sel et poivre.','Cuis-les à feu doux dans le beurre en remuant sans arrêt.','Retire du feu encore crémeux, ajoute la ciboulette.','Sers avec le pain grillé et la tomate.']}),
+R({key:'bol-skyr-granola',kind:'pdj',name:'Bol skyr, granola & kiwi',desc:'Frais, croquant, riche en protéines.',mode:'express',prep:3,cook:0,diff:'facile',gear:[],kcal:360,prot:22,carb:46,fat:9,cost:1.4,tags:['végétarien','sans cuisson'],months:[11,12,1,2,3,4],
+ ing:[['skyr',150,'g','CO'],['granola',30,'g','ES'],['kiwi',1,'pièce','FL'],['miel',1,'c. à c.','EP',1]],
+ steps:['Verse le skyr dans un bol.','Ajoute le kiwi en dés et le granola.','Arrose de miel.']}),
+R({key:'pomme-beurre-cacahuete',kind:'gouter',name:'Pomme & beurre de cacahuète',desc:'Croquant, sucré-salé, prêt en deux minutes.',mode:'express',prep:2,cook:0,diff:'facile',gear:[],kcal:230,prot:7,carb:26,fat:12,cost:0.7,tags:['végétarien','sans cuisson'],
+ ing:[['pomme',1,'pièce','FL'],['beurre de cacahuète',1,'c. à s.','ES']],
+ steps:['Coupe la pomme en quartiers.','Trempe-les dans le beurre de cacahuète.']}),
+R({key:'energy-balls',kind:'gouter',name:'Energy balls dattes, cacao & amandes',desc:'À préparer pour toute la semaine.',mode:'express',prep:15,cook:0,diff:'facile',gear:['mixeur'],kcal:220,prot:5,carb:28,fat:10,cost:0.8,tags:['végétarien','sans cuisson'],
+ ing:[['dattes',40,'g','ES'],['amandes',20,'g','ES'],['cacao en poudre',1,'c. à c.','EP'],['flocons d’avoine',10,'g','ES']],
+ steps:['Mixe dattes, amandes, flocons et cacao.','Forme des boules avec les mains mouillées.','Garde-les au frais jusqu’à une semaine.']}),
+R({key:'yaourt-miel-noix',kind:'gouter',name:'Yaourt grec, miel & noix',desc:'Un classique crémeux.',mode:'express',prep:2,cook:0,diff:'facile',gear:[],kcal:250,prot:12,carb:16,fat:15,cost:0.9,tags:['végétarien','sans cuisson'],
+ ing:[['yaourt grec',125,'g','CO'],['cerneaux de noix',10,'g','ES'],['miel',1,'c. à c.','EP',1]],
+ steps:['Verse le yaourt dans un bol.','Ajoute noix concassées et miel.']}),
+R({key:'tartine-chocolat-banane',kind:'gouter',name:'Tartine complète, chocolat noir & banane',desc:'Le goûter d’enfance, version maline.',mode:'express',prep:3,cook:0,diff:'facile',gear:[],kcal:270,prot:6,carb:42,fat:9,cost:0.7,tags:['végétarien','sans cuisson'],
+ ing:[['pain complet',1,'tranche','BO'],['chocolat noir',10,'g','EP'],['banane',0.5,'pièce','FL']],
+ steps:['Râpe ou coupe finement le chocolat sur le pain.','Ajoute la banane en rondelles.']}),
+R({key:'banana-bread',kind:'gouter',name:'Banana bread moelleux',desc:'Pour plusieurs goûters, encore meilleur le lendemain.',mode:'long',prep:15,cook:50,diff:'facile',gear:['four'],kcal:260,prot:6,carb:36,fat:10,cost:0.6,tags:['végétarien'],
+ ing:[['bananes bien mûres',0.5,'pièce','FL'],['farine',30,'g','EC',1],['œufs',0.25,'pièce','CO'],['sucre',8,'g','EC',1],['beurre',8,'g','CO'],['levure chimique',1,'pincée','EP'],['cerneaux de noix',5,'g','ES']],
+ steps:['Préchauffe le four à 180 °C.','Écrase les bananes, mélange avec beurre fondu, sucre et œufs.','Ajoute farine, levure et noix.','Verse dans un moule à cake beurré, enfourne 50 min.']}),
+R({key:'compote-amandes',kind:'gouter',name:'Compote maison express & amandes',desc:'Pomme et poire fondantes, au micro-ondes.',mode:'express',prep:4,cook:6,diff:'facile',gear:['micro-ondes'],kcal:200,prot:4,carb:32,fat:7,cost:0.8,tags:['végétarien'],months:[9,10,11,12,1,2,3],
+ ing:[['pomme',1,'pièce','FL'],['poire',0.5,'pièce','FL'],['amandes',10,'g','ES'],['cannelle',1,'pincée','EC',1]],
+ steps:['Coupe pomme et poire en dés.','Cuis 6 min au micro-ondes avec 2 c. à s. d’eau, couvert.','Écrase à la fourchette, ajoute cannelle et amandes.']}),
 R({key:'risotto-champignons',name:'Risotto crémeux aux champignons',desc:'Le plaisir de remuer tranquillement.',mode:'long',prep:10,cook:40,diff:'moyen',gear:['plaques'],kcal:620,prot:20,carb:85,fat:20,cost:2.6,tags:['italienne','végétarien'],months:[9,10,11,12],
  ing:[['riz arborio',80,'g','ES'],['champignons',150,'g','FL'],['échalote',1,'pièce','FL'],['parmesan',25,'g','CO'],['beurre',10,'g','CO'],['vin blanc (facultatif)',40,'ml','BS'],['persil plat',0.25,'botte','FL'],['salade verte',50,'g','FL'],['bouillon de légumes',0.5,'cube','EC',1],['huile d’olive',1,'c. à s.','EC',1]],
  steps:['Prépare 300 ml de bouillon chaud par portion.','Fais dorer les champignons émincés à feu vif, réserve.','Fais suer l’échalote, ajoute le riz et nacre-le 2 min, déglace au vin.','Ajoute le bouillon louche par louche en remuant, pendant 18 à 20 min.','Hors du feu, incorpore beurre, parmesan et champignons, couvre 2 min.','Sers avec le persil et une salade verte.'],
  tip:'Le risotto doit onduler comme une vague quand tu secoues la casserole.'})
 ];
+/* Bibliothèque étendue (recipes.js, ~150 recettes) : ajoutée aux recettes intégrées, sans doublon de nom. */
+{const seen=new Set(LIB.map(r=>r.name.toLowerCase()));for(const o of (window.BIDOU_RECIPES||[])){if(seen.has(o.name.toLowerCase()))continue;seen.add(o.name.toLowerCase());try{LIB.push(R(Object.assign({},o,{ing:o.ing.map(x=>x.slice())})))}catch(e){}}}
+const TAG_CUISINE={'française':['fr'],'italienne':['it'],'espagnole':['es'],'grecque':['gr'],'marocaine':['ma'],'libanaise':['lb'],'indienne':['in'],'thaïlandaise':['th'],'vietnamienne':['vn'],'japonaise':['jp'],'coréenne':['kr'],'chinoise':['cn'],'mexicaine':['mx'],'américaine':['us'],'africaine':['af'],'asiatique':['th','vn','jp','kr','cn'],'méditerranéenne':['gr','es','it','lb']};
+const cuisinesOf=r=>(r.tags||[]).flatMap(t=>TAG_CUISINE[t]||[]);
 
 /* =================== Outils =================== */
 const $=s=>document.querySelector(s);
@@ -129,30 +229,37 @@ const eur=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).fo
 function mins(m){m=Math.round(m||0);if(m<60)return m+' min';const h=Math.floor(m/60),r=m%60;return h+' h'+(r?' '+String(r).padStart(2,'0'):'')}
 function frac(x){const w=Math.floor(x+1e-9),f=Math.round((x-w)*4)/4;const F={0.25:'¼',0.5:'½',0.75:'¾'};if(f===0)return String(w);if(f===1)return String(w+1);return (w?w+' ':'')+F[f]}
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{if(v===''||v==null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){}}};
-function dayLabel(k){const[d,s]=k.split('-');return (DAYS.find(x=>x[0]===d)||[,''])[1]+' '+(s==='midi'?'midi':'soir')}
+function dayLabel(k){const[d,s]=k.split('-');return (DAYS.find(x=>x[0]===d)||[,''])[1]+' · '+String((SLOTS.find(x=>x[0]===s)||[,''])[1]).toLowerCase()}
 const month=()=>new Date().getMonth()+1;
 const inSeason=r=>!!r&&(r.season===true||(r.months||[]).includes(month()));
 
 /* =================== Données =================== */
-function defaultPlan(){const p={};for(const[d]of DAYS)for(const[s]of SLOTS)p[d+'-'+s]='off';
-  Object.assign(p,{'lun-soir':'express','mar-soir':'normal','mer-soir':'express','jeu-soir':'normal','ven-soir':'express','sam-soir':'long','dim-midi':'long','dim-soir':'express'});return p}
-function defaultProfile(){return{setup:false,household:1,level:'a-laise',gear:['plaques','four','micro-ondes'],cuisines:['française','italienne','asiatique'],likes:'',dislikes:[],diet:[],
+const ALLDAYS=DAYS.map(d=>d[0]);
+function defaultMeals(){return{pdj:{days:[],mode:'express'},midi:{days:['sam','dim'],mode:'normal'},gouter:{days:[],mode:'express'},soir:{days:ALLDAYS.slice(),mode:'normal'}}}
+function computePlan(p){const plan={};for(const[d]of DAYS)for(const[s]of SLOTS){const m=p.meals[s];plan[d+'-'+s]=m.days.includes(d)?((p.weekendLong&&(d==='sam'||d==='dim')&&(s==='midi'||s==='soir'))?'long':m.mode):'off'}return plan}
+function defaultPlan(){return computePlan({meals:defaultMeals(),weekendLong:true})}
+function defaultProfile(){return{setup:false,household:1,level:'a-laise',gear:['plaques','four','micro-ondes'],cuisines:['fr','it','jp'],likes:'',dislikes:[],diet:[],allergens:[],meals:defaultMeals(),weekendLong:true,
   plan:defaultPlan(),season:true,useMine:true,budgetOn:false,budget:50,calOn:false,kcal:2400,theme:'auto'}}
 function weekFromPlan(plan){const slots={};for(const k in plan)slots[k]={mode:plan[k],recipe:null,pinned:false,portions:null};return{createdAt:null,envies:'',audace:'audace',slots}}
 function norm(d){
   d=d&&typeof d==='object'?d:{};
-  const p=Object.assign(defaultProfile(),d.profile||{});p.plan=Object.assign(defaultPlan(),p.plan||{});
+  const hadMeals=!!(d.profile&&d.profile.meals);const p=Object.assign(defaultProfile(),d.profile||{});p.plan=Object.assign(defaultPlan(),p.plan||{});
+  if(!hadMeals&&d.profile&&d.profile.plan){for(const[s]of SLOTS){const days=ALLDAYS.filter(x=>p.plan[x+'-'+s]&&p.plan[x+'-'+s]!=='off');const modes=days.map(x=>p.plan[x+'-'+s]);p.meals[s]={days,mode:modes.sort((a,b)=>modes.filter(v=>v===b).length-modes.filter(v=>v===a).length)[0]||p.meals[s].mode}}}
+  for(const[s]of SLOTS){p.meals[s]=Object.assign({days:[],mode:'express'},p.meals[s]||{})}
+  p.gear=(p.gear||[]).filter(g=>GEAR.includes(g));p.allergens=Array.isArray(p.allergens)?p.allergens:[];
+  p.cuisines=[...new Set((p.cuisines||[]).flatMap(c=>OLD_CUISINES[c]||[c]).filter(c=>c==='tout'||CUISINE_LABEL[c]))];
   const w=d.week&&d.week.slots?d.week:weekFromPlan(p.plan);
   const base=weekFromPlan(p.plan).slots;for(const k in base){w.slots[k]=Object.assign(base[k],w.slots[k]||{})}
   return{profile:p,week:w,favs:Array.isArray(d.favs)?d.favs:[],mine:Array.isArray(d.mine)?d.mine:[],
     shop:Object.assign({checked:{},extra:[],hideDone:false},d.shop||{})};
 }
 let D=norm((()=>{try{return JSON.parse(LS.get('bidou_d')||'null')}catch(e){return null}})());
-const UI={ob:0,carnetTab:'mine',ideas:(()=>{try{return JSON.parse(LS.get('bidou_ideas')||'[]')}catch(e){return[]}})(),ideaForm:{envie:'',use:'',mode:'normal',audace:'audace'},gen:null,busy:{},sheet:null,authMode:'signup',authErr:'',screen:null,install:null};
+const UI={day:DAYS[(new Date().getDay()+6)%7][0],ob:0,carnetTab:'mine',ideas:(()=>{try{return JSON.parse(LS.get('bidou_ideas')||'[]')}catch(e){return[]}})(),ideaForm:{envie:'',use:'',mode:'normal',audace:'audace'},gen:null,busy:{},sheet:null,authMode:'signup',authErr:'',screen:null,install:null};
 function save(){LS.set('bidou_d',JSON.stringify(D));markDirty()}
+function applyPlan(){const p=D.profile;p.plan=computePlan(p);for(const k in p.plan){const s=D.week.slots[k];if(s&&!s.recipe)s.mode=p.plan[k]}save();render()}
 const activeSlots=()=>Object.keys(D.week.slots).filter(k=>D.week.slots[k].mode!=='off');
 const portionsOf=k=>D.week.slots[k].portions||D.profile.household;
-const mealKcal=()=>Math.round(D.profile.kcal*0.35/10)*10;
+const mealKcal=(s='soir')=>Math.round(D.profile.kcal*(SLOT_SHARE[s]||.3)/10)*10;
 const isFav=r=>!!r&&D.favs.some(f=>f.name===r.name);
 function applyTheme(){const t=D.profile.theme;if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);else document.documentElement.removeAttribute('data-theme')}
 
@@ -238,8 +345,8 @@ function parseJSON(text){
   if(a<1e9&&b>a){try{return JSON.parse(t.slice(a,b+1))}catch(e){}}
   throw{code:'invalid_json'}}
 function chefErr(e){const c=e&&e.code;
-  if(c==='no_config')return'La génération par Claude n’est pas encore branchée : Bidou pioche dans sa bibliothèque.';
-  if(c==='no_session')return'Connecte-toi (onglet Moi) pour des recettes sur mesure. En attendant, Bidou pioche dans sa bibliothèque.';
+  if(c==='no_config')return'Recettes de la bibliothèque Bidou.';
+  if(c==='no_session')return'Recettes de la bibliothèque. Connecte-toi pour du sur-mesure.';
   if(c===403)return'Ton compte n’a pas accès à la génération par Claude. Demande à Simon de t’ajouter.';
   if(c===429)return'Limite du jour atteinte. Réessaie demain.';
   if(c==='offline')return'Pas de connexion internet.';
@@ -250,10 +357,11 @@ const FALLBACK=['no_config','no_session',403];
 /* =================== Prompts =================== */
 function profileText(seasonOn){const p=D.profile;const lvl=(LEVELS.find(l=>l[0]===p.level)||LEVELS[1])[1];
   return[`- Matériel disponible (n'utilise RIEN d'autre ; couteaux, planche, casseroles, poêles et saladiers sont toujours là) : ${p.gear.join(', ')||'plaques uniquement'}`,
-    `- Niveau en cuisine : ${lvl}`,`- Cuisines appréciées : ${p.cuisines.join(', ')||'toutes'}`,p.likes?`- Ce qu'il aime : ${p.likes}`:'',
-    `- À EXCLURE ABSOLUMENT (n'aime pas) : ${p.dislikes.join(', ')||'rien de particulier'}`,`- Régime / allergies à respecter strictement : ${p.diet.join(', ')||'aucun, mange de tout'}`,
+    `- Niveau en cuisine : ${lvl}`,`- Cuisines appréciées : ${p.cuisines.includes('tout')||!p.cuisines.length?'toutes : il est curieux et veut découvrir des cuisines du monde entier':p.cuisines.map(c=>CUISINE_LABEL[c]).join(', ')}`,p.likes?`- Ce qu'il aime : ${p.likes}`:'',
+    `- À EXCLURE ABSOLUMENT (n'aime pas) : ${p.dislikes.join(', ')||'rien de particulier'}`,`- Régime / contraintes à respecter strictement : ${p.diet.join(', ')||'aucun, mange de tout'}`,
+    p.allergens.length?`- ALLERGIES (danger : exclure absolument tout ingrédient qui en contient, y compris sauces et produits transformés) : ${p.allergens.map(a=>ALLERGEN_LABEL[a]).join(', ')}`:'',
     p.budgetOn?`- Budget : environ ${p.budget} € de courses pour toute la semaine pour ${p.household} personne(s)`:'- Budget : pas de contrainte stricte, reste raisonnable',
-    p.calOn?`- Objectif : environ ${p.kcal} kcal par jour ; un déjeuner ou un dîner apporte environ ${mealKcal()} kcal par portion`:"- Pas d'objectif calorique : portions normales, rassasiantes et équilibrées",
+    p.calOn?`- Objectif : environ ${p.kcal} kcal par jour (petit-déjeuner ≈ ${mealKcal('pdj')}, déjeuner ≈ ${mealKcal('midi')}, goûter ≈ ${mealKcal('gouter')}, dîner ≈ ${mealKcal('soir')} kcal par portion)`:"- Pas d'objectif calorique : portions normales, rassasiantes et équilibrées",
     seasonOn?`- DE SAISON (${MONTHS[month()-1]}) : construis les recettes autour des fruits et légumes de saison en France ce mois-ci : ${SEASON[month()-1]}. Mets "season": true quand la recette met en avant un produit de saison.`:''
   ].filter(Boolean).join('\n')}
 const RULES=()=>`RÈGLES
@@ -279,19 +387,20 @@ ENVIES DE LA SEMAINE : ${w.envies||'pas de demande particulière'}
 ORIGINALITÉ VOULUE : ${audaceText(w.audace)}
 
 CRÉNEAUX À REMPLIR (le temps choisi est une contrainte stricte)
-${keys.map(k=>`- ${k} (${dayLabel(k)}) : ${MODES[w.slots[k].mode].prompt}`).join('\n')}
+${keys.map(k=>`- ${k} (${dayLabel(k)}, ${SLOT_PROMPT[k.split('-')[1]]}) : ${MODES[w.slots[k].mode].prompt}`).join('\n')}
 ${kept.length?`\nREPAS DÉJÀ PRÉVUS (ne les répète pas ; réutilise leurs ingrédients frais si c'est naturel) :\n${kept.join('\n')}`:''}
 ${mine.length?`\nSES RECETTES PERSO : tu peux en placer au plus 2 si elles collent au temps du créneau, en renvoyant seulement {"slot":"…","mine":"<id>"} pour ce créneau :\n${mine.join('\n')}`:''}
 
 ${RULES()}
-- Sur la semaine : varie les protéines (volaille, poisson 1 à 2 fois, œufs, légumineuses, viande rouge au plus 1 fois), les cuisines et les textures. Jamais deux fois le même plat.
+- Petit-déjeuner et goûter : des recettes adaptées à ce moment (pas un plat de dîner), simples et équilibrées.
+- Sur la semaine (déjeuners et dîners) : varie les protéines (volaille, poisson 1 à 2 fois, œufs, légumineuses, viande rouge au plus 1 fois), les cuisines et les textures. Jamais deux fois le même plat.
 - Mutualise les ingrédients frais entre les recettes pour limiter le gaspillage et le coût.
 
 FORMAT : réponds uniquement par un objet JSON, une entrée par créneau, dans l'ordre :
 {"meals":[{"slot":"${keys[0]}",…recette…}]}
 où chaque recette a exactement cette forme : ${SHAPE}`}
 function replacePrompt(k){const w=D.week;const avoid=activeSlots().filter(x=>w.slots[x].recipe).map(x=>w.slots[x].recipe.name);
-  return`Tu es le chef de Bidou, une application française qui planifie les repas de la semaine. Propose UNE nouvelle recette pour ${dayLabel(k)}.
+  return`Tu es le chef de Bidou, une application française qui planifie les repas de la semaine. Propose UNE nouvelle recette pour ${dayLabel(k)} : ${SLOT_PROMPT[k.split('-')[1]]}.
 
 PROFIL
 ${profileText(D.profile.season)}
@@ -339,14 +448,23 @@ function cleanRecipe(o,mode){
   r.total=n(o.total)||r.prep+r.cook;if(!r.ing.length||!r.steps.length)return null;return r}
 const countNames=t=>(t.match(/"(name|mine)"\s*:/g)||[]).length;
 
+/* allergènes */
+function allergensOf(r){const t=(r&&r.ing||[]).map(i=>String(i.n).toLowerCase()).join(' | ');return ALLERGENS.filter(a=>a[2].test(t)).map(a=>a[0])}
+function userAlerts(r){const mine=D.profile.allergens;return mine.length?allergensOf(r).filter(a=>mine.includes(a)):[]}
+function ingFlags(i){const n=String(i.n).toLowerCase();return{al:ALLERGENS.filter(a=>D.profile.allergens.includes(a[0])&&a[2].test(n)).map(a=>a[1]),dis:D.profile.dislikes.some(d=>n.includes(String(d).toLowerCase().replace(/ cru$/,'')))}}
 /* secours sans Claude */
-function libPick(mode,avoid){const p=D.profile,dis=p.dislikes.map(d=>d.toLowerCase()),veg=p.diet.includes('végétarien');
-  const ok=r=>r.gear.every(g=>p.gear.includes(g))&&!r.ing.some(i=>dis.some(d=>i.n.toLowerCase().includes(d)))&&(!veg||r.tags.includes('végétarien'))&&!avoid.includes(r.name);
-  let pool=LIB.filter(r=>r.mode===mode&&ok(r));if(!pool.length)pool=LIB.filter(r=>r.total<=MODES[mode].max&&ok(r));if(!pool.length)return null;
-  if(p.season){const s=pool.filter(r=>r.months.includes(month()));if(s.length)pool=s}
+const kindOf=k=>{const s=k.split('-')[1];return s==='pdj'?'pdj':s==='gouter'?'gouter':'repas'};
+function libPick(mode,avoid,kind='repas'){const p=D.profile,dis=p.dislikes.map(d=>d.toLowerCase().replace(/ cru$/,'')),veg=p.diet.includes('végétarien');
+  const fits=r=>r.kind===kind&&r.gear.every(g=>p.gear.includes(g))&&!userAlerts(r).length&&!r.ing.some(i=>dis.some(d=>i.n.toLowerCase().includes(d)))&&(!veg||r.tags.includes('végétarien'));
+  const base=LIB.filter(fits);if(!base.length)return null;
+  const fresh=base.filter(r=>!avoid.includes(r.name)),M=r=>r.mode===mode,T=r=>r.total<=MODES[mode].max;
+  const near=x=>x.slice().sort((a,b)=>Math.abs(a.total-MODES[mode].max)-Math.abs(b.total-MODES[mode].max)).slice(0,3);
+  let pool=[fresh.filter(M),base.filter(M),fresh.filter(T),base.filter(T),near(base)].find(x=>x.length);
+  if(p.season){const s2=pool.filter(r=>!r.months.length||r.months.includes(month()));if(s2.length)pool=s2}
+  if(p.cuisines.length&&!p.cuisines.includes('tout')&&Math.random()<0.8){const s3=pool.filter(r=>cuisinesOf(r).some(c=>p.cuisines.includes(c)));if(s3.length)pool=s3}
   const r=clone(pool[Math.floor(Math.random()*pool.length)]);r.season=inSeason(r);return r}
 function fillFromLibrary(keys){const used=activeSlots().filter(k=>!keys.includes(k)&&D.week.slots[k].recipe).map(k=>D.week.slots[k].recipe.name);
-  for(const k of keys){const r=libPick(D.week.slots[k].mode,used);D.week.slots[k].recipe=r;if(r)used.push(r.name)}}
+  for(const k of keys){const r=libPick(D.week.slots[k].mode,used,kindOf(k));D.week.slots[k].recipe=r;if(r)used.push(r.name)}}
 
 /* =================== Liste de courses =================== */
 function normUnit(u){u=String(u||'').trim().toLowerCase();
@@ -412,187 +530,218 @@ function render(){
 function softRender(){const a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')&&a.closest('#app'))return;render()}
 function vTabbar(){const t=tab();const n=shoppingList().items.filter(i=>!i.staple&&!D.shop.checked[i.key]).length+D.shop.extra.filter(e=>!e.done).length;
   return`<nav class="tabbar" aria-label="Sections"><div class="wrap">${TABS.map(([id,l,ic])=>`<a href="#${id}" ${t===id?'aria-current="page"':''}><span class="ic">${ic}</span>${l}${id==='courses'&&n?`<span class="count num">${n}</span>`:''}</a>`).join('')}</div></nav>`}
-function band(inner){return`<header class="band gutter"><div class="wrap"><div class="band-top"><span class="brand"><span class="badge">${logo(30)}</span>Bidou</span>${syncBadge()}</div>${inner}</div></header>`}
-function syncBadge(){if(!SB.on())return'';if(!signedIn())return`<a class="btn small ghost" href="#moi">Se connecter</a>`;
-  const t=SYNC==='ok'?'Synchronisé':SYNC==='offline'?'Hors ligne':SYNC==='err'?'Synchro en attente':'Synchro…';return`<span class="sub" style="font-size:12px;font-weight:600">${t}</span>`}
+function band(inner,cls=''){return`<header class="band gutter ${cls}"><div class="wrap"><div class="band-top"><span class="brand"><span class="badge">${logo(30)}</span>Bidou</span>${syncBadge()}</div>${inner}</div></header>`}
+function syncBadge(){if(!SB.on()||tab()==='moi')return'';if(!signedIn())return`<a class="btn small ghost" href="#moi">Se connecter</a>`;
+  const t=SYNC==='ok'?'':SYNC==='offline'?'Hors ligne':SYNC==='err'?'Synchro en attente':'';return t?`<span class="sub" style="font-size:12px;font-weight:600">${t}</span>`:''}
+const ICO={
+  users:SI('<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.9-3.3 3-4.8 5.5-4.8s4.6 1.5 5.5 4.8"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.3c2.3.1 3.9 1.5 4.6 4.2"/>'),
+  person:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4" fill="currentColor"/><path d="M4 21c1-5 4.4-7.5 8-7.5s7 2.5 8 7.5z" fill="currentColor"/></svg>',
+  chef:SI('<path d="M7 14a4 4 0 0 1-.6-7.9A5 5 0 0 1 16 5a4 4 0 0 1 1 9"/><path d="M7 14v6h10v-6M7 17h10"/>'),
+  globe:SI('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/>'),
+  no:SI('<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>'),
+  alert:SI('<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17v.5"/>'),
+  sliders:SI('<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>'),
+  moon:SI('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
+  phone:SI('<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>'),
+  pot:GEAR_LIST[5][2],
+  euro:SI('<path d="M17 6.5a7 7 0 1 0 0 11M4 10h9M4 14h9"/>'),
+  flame:SI('<path d="M12 3c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-4 2-7 2 1 3 3 3 5 1-2 1-5 1-9z"/>'),
+  chev:SI('<path d="M9 5l7 7-7 7"/>'),
+  sun:SI('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>')
+};
 
 /* ---- accueil ---- */
 function vWelcome(){return`<div class="screen welcome gutter"><div class="wrap">
-  <div class="hero"><div class="logo-big">${logo(150)}</div><h1>Bidou</h1><p class="tagline">Tes repas de la semaine, au temps que tu as envie de passer en cuisine.</p></div>
+  <div class="hero"><div class="logo-big">${logo(150)}</div><h1>Bidou</h1><p class="tagline">Tes repas de la semaine, au temps que tu as.</p></div>
   ${installHint()}
   <div class="stack"><button class="btn primary block" data-act="start">Commencer</button>
-  ${SB.on()?`<button class="btn ghost block" data-act="goLogin">J’ai déjà un compte</button>`:''}
-  <p class="note">Gratuit. Ton compte sert seulement à sauvegarder tes données.</p></div></div></div>`}
+  ${SB.on()?`<button class="btn ghost block" data-act="goLogin">J’ai déjà un compte</button>`:''}</div></div></div>`}
 function isIOS(){return/iphone|ipad|ipod/i.test(navigator.userAgent)}
 function standalone(){return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}
 function installHint(){if(standalone())return'';
-  if(UI.install)return`<button class="btn ghost block" data-act="install">${I.share} Installer Bidou sur l’écran d’accueil</button>`;
-  if(isIOS())return`<div class="notice" style="background:var(--band-soft);color:inherit"><span>Pour l’installer : touche <b>Partager</b> puis <b>Sur l’écran d’accueil</b>.</span></div>`;
+  if(UI.install)return`<button class="btn ghost block" data-act="install">${I.share} Installer sur l’écran d’accueil</button>`;
+  if(isIOS())return`<p class="note">${I.share.replace('<svg','<svg width="16" height="16" style="vertical-align:-3px"')} Partager › Sur l’écran d’accueil</p>`;
   return''}
 
-/* ---- questionnaire (premier lancement) ---- */
-const OB=['household','gear','cuisines','dislikes','diet','plan','options','account'];
-function obSteps(){return OB.filter(s=>s!=='account'||(SB.on()&&!signedIn()))}
-function vOnboard(){const steps=obSteps(),i=Math.min(UI.ob,steps.length-1),s=steps[i],p=D.profile;
-  const bar=`<div class="ob-bar" style="grid-template-columns:repeat(${steps.length},1fr)">${steps.map((_,j)=>`<span class="${j<=i?'on':''}"></span>`).join('')}</div>`;
-  let body='';
-  if(s==='household')body=`<h1>Vous êtes combien à table ?</h1><p class="lead">Les quantités et la liste de courses s’adaptent. Tu pourras changer repas par repas.</p>
-    <div class="big-stepper" style="display:flex;justify-content:center;padding:24px 0"><div class="stepper"><button data-act="household" data-d="-1" aria-label="Moins">−</button><span class="num">${p.household}</span><button data-act="household" data-d="1" aria-label="Plus">+</button></div></div>`;
-  if(s==='gear')body=`<h1>Qu’as-tu dans ta cuisine ?</h1><p class="lead">Bidou ne proposera que des recettes faisables avec.</p>
-    <div class="checklist">${GEAR.map(g=>`<label>${esc(g[0].toUpperCase()+g.slice(1))}<input type="checkbox" data-act="toggleArr" data-field="gear" data-val="${esc(g)}" ${p.gear.includes(g)?'checked':''}></label>`).join('')}</div>`;
-  if(s==='cuisines')body=`<h1>Qu’est-ce que tu aimes manger ?</h1><p class="lead">Choisis tes cuisines préférées, et dis-en un peu plus si tu veux.</p>
-    <div class="chips">${CUISINES.map(c=>`<button class="chip" data-act="toggleArr" data-field="cuisines" data-val="${esc(c)}" aria-pressed="${p.cuisines.includes(c)}">${esc(c)}</button>`).join('')}</div>
-    <div><label class="lbl" for="likes">En quelques mots</label><textarea id="likes" data-bind="profile.likes" placeholder="ex. j’adore le fromage, les plats épicés, le croquant">${esc(p.likes)}</textarea></div>`;
-  if(s==='dislikes')body=`<h1>Et ce que tu n’aimes pas ?</h1><p class="lead">Ces ingrédients ne seront jamais proposés.</p>${tagInput('dislikes',p.dislikes,'ex. coriandre, betterave')}`;
-  if(s==='diet')body=`<h1>Un régime ou une allergie ?</h1><p class="lead">Aucun par défaut : juste bien manger, de façon équilibrée.</p>
-    <div class="chips">${DIETS.map(d=>`<button class="chip" data-act="toggleArr" data-field="diet" data-val="${esc(d)}" aria-pressed="${p.diet.includes(d)}">${esc(d)}</button>`).join('')}</div>
-    ${tagInput('allergies',p.diet.filter(d=>!DIETS.includes(d)),'Autre allergie ou contrainte')}`;
-  if(s==='plan')body=`<h1>Combien de temps veux-tu cuisiner ?</h1><p class="lead">Ta semaine type. Tu pourras changer chaque repas avant de générer.</p>${planEditor()}`;
-  if(s==='options')body=`<h1>Quelques options</h1><p class="lead">Tout se change plus tard dans l’onglet Moi.</p>${optionsEditor()}`;
-  if(s==='account')body=`<h1>Crée ton compte</h1><p class="lead">Pour retrouver tes semaines et tes recettes sur tous tes appareils, et pour que Claude invente tes recettes.</p>${authForm('signup')}`;
-  const last=i===steps.length-1;
-  return`<div class="screen gutter"><div class="wrap ob">
-    <div class="ob-top"><button class="icon-btn" data-act="obBack" aria-label="Retour">${I.back}</button>${bar}<span class="muted num" style="font-weight:700">${i+1}/${steps.length}</span></div>
-    ${body}
-    <div class="ob-actions">${s==='account'?`<button class="btn" data-act="obFinish">Plus tard</button>`:`<button class="btn primary" data-act="${last?'obFinish':'obNext'}">${last?'C’est parti':'Continuer'}</button>`}</div>
-  </div></div>`}
+/* ---- éditeurs (questionnaire et onglet Moi) ---- */
 function tagInput(field,list,ph){return`<div class="chips">${list.map((t,i)=>`<span class="chip" aria-pressed="true">${esc(t)}<button class="x" data-act="untag" data-field="${field}" data-i="${i}" aria-label="Retirer ${esc(t)}">×</button></span>`).join('')}</div>
-  <form class="row" data-form="tag" data-field="${field}" style="flex-wrap:nowrap"><input type="text" id="tag-${field}" placeholder="${esc(ph)}" aria-label="${esc(ph)}" enterkeyhint="done"><button class="btn" type="submit">Ajouter</button></form>`}
-function planEditor(){const p=D.profile;
-  return`<div class="card" style="padding:4px 14px">${DAYS.map(([d,l])=>{const k=d+'-soir';return`<div class="planrow"><b>${l}</b><div class="seg modes" role="group" aria-label="${l} soir">${MODE_KEYS.map(m=>`<button data-act="planMode" data-slot="${k}" data-mode="${m}" aria-pressed="${p.plan[k]===m}">${MODES[m].short}</button>`).join('')}</div></div>`}).join('')}</div>
-  <div class="card" style="padding:4px 14px">${['sam','dim'].map(d=>{const k=d+'-midi',l=(DAYS.find(x=>x[0]===d)||[])[1];return`<div class="planrow"><b>${l} midi</b><div class="seg modes" role="group" aria-label="${l} midi">${MODE_KEYS.map(m=>`<button data-act="planMode" data-slot="${k}" data-mode="${m}" aria-pressed="${p.plan[k]===m}">${MODES[m].short}</button>`).join('')}</div></div>`}).join('')}</div>
-  <p class="muted" style="font-size:13px">— pas de repas · 20 min express · 45 min normal · 1 h + j’ai le temps. Les midis de semaine s’ajoutent dans l’onglet Semaine.</p>`}
+  <form class="row nowrap" data-form="tag" data-field="${field}"><input type="text" id="tag-${field}" placeholder="${esc(ph)}" aria-label="${esc(ph)}" enterkeyhint="done"><button class="btn" type="submit" aria-label="Ajouter">${I.plus}</button></form>`}
+function householdEditor(){const n=D.profile.household;
+  return`<div class="people" aria-hidden="true">${Array.from({length:Math.min(n,8)},()=>`<span>${ICO.person}</span>`).join('')}${n>8?`<b>+${n-8}</b>`:''}</div>
+  <div class="big-stepper"><div class="stepper"><button data-act="household" data-d="-1" aria-label="Une personne de moins">−</button><span class="num">${n}</span><button data-act="household" data-d="1" aria-label="Une personne de plus">+</button></div></div>
+  <div class="seg full" role="group" aria-label="Niveau en cuisine">${LEVELS.map(([id,l])=>`<button data-act="level" data-val="${id}" aria-pressed="${D.profile.level===id}">${l}</button>`).join('')}</div>`}
+function mealsEditor(){const m=D.profile.meals;
+  return`<div class="stack">${SLOTS.map(([s,l])=>{const on=m[s].days;return`<div class="mealrow ${on.length?'on':''}">
+    <button class="mealhead" data-act="mealAll" data-slot="${s}" aria-pressed="${on.length>0}"><span class="mic">${SLOT_ICON[s]}</span><b>${l}</b><span class="cnt num">${on.length?on.length+' j':'—'}</span></button>
+    <div class="daydots">${DAYS.map(([d,dl])=>`<button class="dd" data-act="mealDay" data-slot="${s}" data-day="${d}" aria-pressed="${on.includes(d)}" aria-label="${l} ${dl}">${dl.slice(0,2)}</button>`).join('')}</div></div>`}).join('')}</div>`}
+function timeEditor(){const p=D.profile,act=SLOTS.filter(([s])=>p.meals[s].days.length);
+  if(!act.length)return`<p class="muted">Choisis d’abord au moins un repas.</p>`;
+  return`<div class="stack">${act.map(([s,l])=>`<div class="timecard"><div class="tc-head"><span class="mic">${SLOT_ICON[s]}</span><b>${l}</b></div>
+    <div class="timeopts">${['express','normal','long'].map(m=>`<button class="topt" data-act="mealMode" data-slot="${s}" data-mode="${m}" data-tone="${m}" aria-pressed="${p.meals[s].mode===m}">${MODE_ICON[m]}<b>${MODES[m].short}</b></button>`).join('')}</div></div>`).join('')}
+    ${act.some(([s])=>s==='midi'||s==='soir')?`<label class="switchrow"><span class="mic">${ICO.sun}</span><b>Plus de temps le week-end</b><input type="checkbox" data-act="weekendLong" ${p.weekendLong?'checked':''}></label>`:''}</div>`}
+function gearEditor(){const p=D.profile;return`<div class="tiles">${GEAR_LIST.map(([id,l,ic])=>`<button class="tile" data-act="toggleArr" data-field="gear" data-val="${esc(id)}" aria-pressed="${p.gear.includes(id)}">${ic}<span>${l}</span></button>`).join('')}</div>`}
+function cuisineEditor(){const p=D.profile,all=p.cuisines.includes('tout');
+  return`<div class="cuisines">${[['tout','Tout, je suis curieux',''],...CUISINES].map(([id,l,flag])=>`<button class="cuisine${id==='tout'?' wide':''}" data-act="cuisine" data-val="${id}" aria-pressed="${id==='tout'?all:(!all&&p.cuisines.includes(id))}"><span class="pat pat-${id}" aria-hidden="true"></span>${flag?`<span class="flag">${flag}</span>`:''}<span class="cn">${l}</span><span class="ck" aria-hidden="true">✓</span></button>`).join('')}</div>`}
+function likesField(id){return`<textarea id="${id}" data-bind="profile.likes" rows="2" aria-label="Ce que tu adores" placeholder="Tu adores… (fromage, épicé, croquant)">${esc(D.profile.likes)}</textarea>`}
+function dislikeEditor(){const p=D.profile,custom=p.dislikes.filter(d=>!DISLIKES.includes(d));
+  return`<div class="chips">${DISLIKES.map(d=>`<button class="chip no" data-act="toggleArr" data-field="dislikes" data-val="${esc(d)}" aria-pressed="${p.dislikes.includes(d)}">${esc(d)}</button>`).join('')}</div>
+  ${tagInput('dislikesCustom',custom,'Autre chose…')}`}
+function allergyEditor(){const p=D.profile;
+  return`<div class="tiles al">${ALLERGENS.map(([id,l])=>`<button class="tile allergen" data-act="toggleArr" data-field="allergens" data-val="${id}" aria-pressed="${p.allergens.includes(id)}"><span class="warn-ic" aria-hidden="true">!</span><span>${l}</span></button>`).join('')}</div>
+  <div class="chips">${DIETS.map(d=>`<button class="chip" data-act="toggleArr" data-field="diet" data-val="${esc(d)}" aria-pressed="${p.diet.includes(d)}">${esc(d)}</button>`).join('')}</div>
+  ${tagInput('allergies',p.diet.filter(d=>!DIETS.includes(d)),'Autre contrainte…')}`}
 function optionsEditor(){const p=D.profile;
-  return`<div class="checklist">
-    <label>De saison par défaut<input type="checkbox" data-act="opt" data-field="season" ${p.season?'checked':''}></label>
-    <label>Glisser mes recettes dans la semaine<input type="checkbox" data-act="opt" data-field="useMine" ${p.useMine?'checked':''}></label>
-    <label>Budget courses par semaine<input type="checkbox" data-act="opt" data-field="budgetOn" ${p.budgetOn?'checked':''}></label>
-    ${p.budgetOn?`<div class="row" style="padding:0 0 12px"><input type="number" min="10" step="5" id="budget" data-bind="profile.budget" value="${p.budget}" aria-label="Budget en euros"><span class="muted">€ / semaine</span></div>`:''}
-    <label>Objectif de calories<input type="checkbox" data-act="opt" data-field="calOn" ${p.calOn?'checked':''}></label>
-    ${p.calOn?`<div class="row" style="padding:0 0 12px"><input type="number" min="1200" step="50" id="kcal" data-bind="profile.kcal" value="${p.kcal}" aria-label="Calories par jour"><span class="muted">kcal / jour</span></div>`:''}
-  </div><p class="muted" style="font-size:13px">Sans objectif, les calories restent affichées pour info.</p>`}
+  return`<div class="stack">
+    <label class="switchrow"><span class="mic">${I.leaf}</span><b>De saison</b><input type="checkbox" data-act="opt" data-field="season" ${p.season?'checked':''}></label>
+    <label class="switchrow"><span class="mic">${I.book}</span><b>Mes recettes dans la semaine</b><input type="checkbox" data-act="opt" data-field="useMine" ${p.useMine?'checked':''}></label>
+    <label class="switchrow"><span class="mic">${ICO.euro}</span><b>Budget par semaine</b><input type="checkbox" data-act="opt" data-field="budgetOn" ${p.budgetOn?'checked':''}></label>
+    ${p.budgetOn?`<div class="row sub-opt"><input type="number" min="10" step="5" id="budget" data-bind="profile.budget" value="${p.budget}" aria-label="Budget en euros"><span class="muted">€ / semaine</span></div>`:''}
+    <label class="switchrow"><span class="mic">${ICO.flame}</span><b>Objectif de calories</b><input type="checkbox" data-act="opt" data-field="calOn" ${p.calOn?'checked':''}></label>
+    ${p.calOn?`<div class="row sub-opt"><input type="number" min="1200" step="50" id="kcal" data-bind="profile.kcal" value="${p.kcal}" aria-label="Calories par jour"><span class="muted">kcal / jour</span></div>`:''}
+  </div>`}
+function themeEditor(){return`<div class="seg full" role="group" aria-label="Apparence">${[['auto','Auto'],['light','Clair'],['dark','Sombre']].map(([id,l])=>`<button data-act="theme" data-val="${id}" aria-pressed="${D.profile.theme===id}">${l}</button>`).join('')}</div>`}
+
+/* ---- questionnaire ---- */
+const OB=[
+  ['household','Combien à table ?','',householdEditor],
+  ['meals','Tu cuisines quand ?','Touche un repas, puis ajuste les jours.',mealsEditor],
+  ['time','Combien de temps ?','Pour chaque repas, en général.',timeEditor],
+  ['gear','Ton matériel','',gearEditor],
+  ['cuisines','Tu aimes manger…','',()=>cuisineEditor()+likesField('likes')],
+  ['dislikes','Tu n’aimes pas…','',dislikeEditor],
+  ['allergies','Des allergies ?','Aucune ? Passe à la suite.',allergyEditor],
+  ['options','Options','',optionsEditor],
+  ['account','Ton compte','Pour sauvegarder tes données.',()=>authForm('signup')]];
+function obSteps(){return OB.filter(s=>s[0]!=='account'||(SB.on()&&!signedIn()))}
+function vOnboard(){const steps=obSteps(),i=Math.min(UI.ob,steps.length-1),[id,title,lead,ed]=steps[i],last=i===steps.length-1;
+  return`<div class="screen gutter"><div class="wrap ob">
+    <div class="ob-top"><button class="icon-btn" data-act="obBack" aria-label="Retour">${I.back}</button><div class="ob-bar" style="grid-template-columns:repeat(${steps.length},1fr)">${steps.map((_,j)=>`<span class="${j<=i?'on':''}"></span>`).join('')}</div></div>
+    <div class="ob-head"><h1>${title}</h1>${lead?`<p class="lead">${lead}</p>`:''}</div>
+    ${ed()}
+    <div class="ob-actions">${id==='account'?`<button class="btn block" data-act="obFinish">Plus tard</button>`:`<button class="btn primary block" data-act="${last?'obFinish':'obNext'}">${last?'C’est parti':'Continuer'}</button>`}</div>
+  </div></div>`}
 function authForm(mode){return`<form class="stack" data-form="auth" data-mode="${mode}">
-  <div><label class="lbl" for="au-email">E-mail</label><input type="email" id="au-email" autocomplete="email" required></div>
-  <div><label class="lbl" for="au-pw">Mot de passe</label><input type="password" id="au-pw" autocomplete="${mode==='signup'?'new-password':'current-password'}" minlength="6" required></div>
+  <input type="email" id="au-email" autocomplete="email" placeholder="E-mail" aria-label="E-mail" required>
+  <input type="password" id="au-pw" autocomplete="${mode==='signup'?'new-password':'current-password'}" minlength="6" placeholder="Mot de passe (6 caractères min.)" aria-label="Mot de passe" required>
   ${UI.authErr?`<p class="err">${esc(UI.authErr)}</p>`:''}
   <button class="btn primary block" type="submit">${mode==='signup'?'Créer mon compte':'Me connecter'}</button>
   ${mode==='login'?`<button class="btn block" type="button" data-act="forgot">Mot de passe oublié</button>`:''}
   </form>`}
 function vAuth(){const m=UI.authMode;return`<div class="screen gutter"><div class="wrap ob">
   <div class="ob-top"><button class="icon-btn" data-act="authBack" aria-label="Retour">${I.back}</button></div>
-  <h1>${m==='signup'?'Crée ton compte':'Content de te revoir'}</h1>
-  <p class="lead">${m==='signup'?'Tes goûts, tes semaines et tes recettes seront sauvegardés.':'Connecte-toi pour retrouver tes semaines et tes recettes.'}</p>
+  <div class="ob-head"><h1>${m==='signup'?'Crée ton compte':'Content de te revoir'}</h1></div>
   ${authForm(m)}
   <button class="btn block" data-act="authSwitch">${m==='signup'?'J’ai déjà un compte':'Créer un compte'}</button></div></div>`}
 
 /* ---- semaine ---- */
-function modeSeg(k,mode){return`<div class="seg modes" role="group" aria-label="Temps pour ${esc(dayLabel(k))}">${MODE_KEYS.map(m=>`<button data-act="mode" data-slot="${k}" data-mode="${m}" aria-pressed="${mode===m}" title="${esc(MODES[m].title)}">${MODES[m].short}</button>`).join('')}</div>`}
-function meta(r,por){const b=[mins(r.total)];if(r.cost)b.push(eur(r.cost)+'/pers.');if(r.kcal)b.push(nf0.format(r.kcal)+' kcal');if(por&&por!==1)b.push(por+' pers.');return b.join(' · ')}
-function mealCard(k){const s=D.week.slots[k];if(s.mode==='off')return'';
-  if(UI.busy[k])return`<div class="meal busy">Bidou cherche une idée…</div>`;
-  if(!s.recipe)return`<div class="meal empty">À générer : ${esc(MODES[s.mode].title)}</div>`;
-  const r=s.recipe,tooLong=r.total>MODES[s.mode].max+5;
-  return`<article class="meal"><button class="meal-open" data-act="open" data-slot="${k}"><span class="meal-name">${esc(r.name)}</span><span class="meal-meta num">${esc(meta(r,portionsOf(k)))}</span></button>
-    ${tooLong?`<span class="warn">Trop long pour ce créneau (${mins(r.total)}).</span>`:''}
-    <div class="meal-foot"><span class="tags"><span class="tag ${s.mode}">${esc(MODES[s.mode].label)}</span>${inSeason(r)?`<span class="tag season">${I.leaf.replace('<svg','<svg width="12" height="12"')}De saison</span>`:''}${r.mine?'<span class="tag mine">Ma recette</span>':''}</span>
-    <span class="meal-acts"><button class="icon-btn ${s.pinned?'on':''}" data-act="pin" data-slot="${k}" aria-pressed="${s.pinned}" aria-label="Garder ce repas" title="Garder lors de la prochaine génération">${I.lock}</button>
+function meta(r,por){const b=[mins(r.total)];if(r.cost)b.push(eur(r.cost));if(r.kcal)b.push(nf0.format(r.kcal)+' kcal');if(por&&por!==1)b.push(por+' pers.');return b.join(' · ')}
+function tagsFor(r){return`${inSeason(r)?`<span class="tag season">${I.leaf.replace('<svg','<svg width="12" height="12"')}Saison</span>`:''}${r.mine?'<span class="tag mine">Ma recette</span>':''}${userAlerts(r).length?`<span class="tag danger">! ${esc(userAlerts(r).map(a=>ALLERGEN_LABEL[a]).join(', '))}</span>`:''}`}
+function mealCard(k){const s=D.week.slots[k],slot=k.split('-')[1],sl=(SLOTS.find(x=>x[0]===slot)||[])[1];
+  const head=`<div class="meal-top"><span class="mic">${SLOT_ICON[slot]}</span><span class="slot-name">${sl}</span><button class="timechip" data-tone="${s.mode}" data-act="timeSheet" data-slot="${k}" aria-label="Temps pour ${esc(dayLabel(k))} : ${esc(MODES[s.mode].short)}">${MODE_ICON[s.mode]}${MODES[s.mode].short}</button></div>`;
+  if(UI.busy[k])return`<article class="meal busy">${head}<p class="muted">Bidou cherche une idée…</p></article>`;
+  if(!s.recipe)return`<article class="meal empty">${head}<p class="muted">À générer</p></article>`;
+  const r=s.recipe;
+  return`<article class="meal">${head}<button class="meal-open" data-act="open" data-slot="${k}"><span class="meal-name">${esc(r.name)}</span><span class="meal-meta num">${esc(meta(r,portionsOf(k)))}</span></button>
+    <div class="meal-foot"><span class="tags">${tagsFor(r)}${r.total>MODES[s.mode].max+5?`<span class="tag danger">Trop long</span>`:''}</span>
+    <span class="meal-acts"><button class="icon-btn ${s.pinned?'on':''}" data-act="pin" data-slot="${k}" aria-pressed="${s.pinned}" aria-label="Garder ce repas">${I.lock}</button>
     <button class="icon-btn" data-act="replace" data-slot="${k}" aria-label="Autre idée">${I.refresh}</button>
     <button class="icon-btn fav ${isFav(r)?'on':''}" data-act="favSlot" data-slot="${k}" aria-label="Favori">${I.heart}</button></span></div></article>`}
 function progressHTML(){const g=UI.gen;if(!g)return'';const pct=g.n?Math.min(100,Math.round(g.n/g.total*100)):35;
-  const label=g.n?`${g.n} / ${g.total} ${g.kind==='week'?'recettes écrites':'idées'}`:(g.kind==='week'?'Bidou réfléchit à ta semaine… (environ une minute)':'Bidou cherche…');
+  const label=g.n?`${g.n} / ${g.total}`:(g.kind==='week'?'Bidou cuisine ta semaine…':'Bidou cherche…');
   return`<div class="progress" id="gen-progress"><div class="bar ${g.n?'':'indet'}"><span style="width:${pct}%"></span></div><span class="num">${label}</span><button class="btn small" data-act="stop">Arrêter</button></div>`}
 function updateProgress(n){if(!UI.gen||n===UI.gen.n)return;UI.gen.n=n;const el=document.getElementById('gen-progress');if(el)el.outerHTML=progressHTML()}
+const AUDACE_SHORT={classique:'Classique',audace:'Audacieux',surprise:'Surprenant'};
 function vWeek(){const w=D.week,p=D.profile,act=activeSlots(),filled=act.filter(k=>w.slots[k].recipe);
-  const cost=sum(filled.map(k=>(w.slots[k].recipe.cost||0)*portionsOf(k))),totalMin=sum(filled.map(k=>w.slots[k].recipe.total));
-  const toGen=act.filter(k=>!w.slots[k].pinned).length,g=UI.gen;
-  return band(`<h1>Ta semaine</h1><p class="sub num">${act.length} repas · ${mins(totalMin)} en cuisine · ≈ ${eur(cost)}</p>
-    <div class="row" style="flex-wrap:nowrap"><input type="text" id="envies" data-bind="week.envies" value="${esc(w.envies||'')}" placeholder="Tes envies : un plat thaï, du réconfort…" aria-label="Tes envies cette semaine" enterkeyhint="go">
-    <button class="btn dark" data-act="generate" ${g||!toGen?'disabled':''}>${I.spark} Générer</button></div>
-    <div class="row"><button class="chip" data-act="season" aria-pressed="${p.season}">${I.leaf} De saison</button>
-    <div class="seg" role="group" aria-label="Originalité">${AUDACE.map(([id,l])=>`<button data-act="audace" data-val="${id}" aria-pressed="${(w.audace||'audace')===id}">${l}</button>`).join('')}</div></div>
-    ${g&&g.kind==='week'?progressHTML():''}`)+
+  const cost=sum(filled.map(k=>(w.slots[k].recipe.cost||0)*portionsOf(k)));
+  const toGen=act.filter(k=>!w.slots[k].pinned).length,g=UI.gen,d=UI.day,dl=(DAYS.find(x=>x[0]===d)||DAYS[0])[1];
+  const ks=SLOTS.map(([s])=>d+'-'+s),on=ks.filter(k=>w.slots[k].mode!=='off'),off=ks.filter(k=>w.slots[k].mode==='off');
+  return band(`<div class="between"><h1>Ta semaine</h1><span class="pill num">${act.length} repas${cost?' · ≈ '+eur(cost):''}</span></div>
+    <div class="row nowrap"><input type="text" id="envies" data-bind="week.envies" value="${esc(w.envies||'')}" placeholder="Une envie ? (thaï, réconfort…)" aria-label="Tes envies cette semaine" enterkeyhint="go">
+    <button class="btn dark" data-act="generate" ${g||!toGen?'disabled':''}>${I.spark}<span>Générer</span></button></div>
+    <div class="row quick"><span class="qchip">${ICO.users}<span class="stepper mini"><button data-act="household" data-d="-1" aria-label="Une personne de moins">−</button><span class="num">${p.household}</span><button data-act="household" data-d="1" aria-label="Une personne de plus">+</button></span></span>
+      <button class="qchip" data-act="season" aria-pressed="${p.season}">${I.leaf}<span>Saison</span></button>
+      <button class="qchip" data-act="audaceCycle" aria-label="Originalité : ${AUDACE_SHORT[w.audace||'audace']}">${I.spark}<span>${AUDACE_SHORT[w.audace||'audace']}</span></button></div>
+    ${g&&g.kind==='week'?progressHTML():''}`,'compact')+
   `<main class="gutter"><div class="wrap stack">
-    ${!w.createdAt&&!filled.length?`<div class="notice"><span>Choisis le temps de chaque repas puis touche <b>Générer</b>. ${toGen} repas à préparer.</span></div>`:''}
-    ${!signedIn()&&SB.on()?`<div class="notice"><span>Sans compte, Bidou pioche dans sa petite bibliothèque. Connecte-toi pour des recettes inventées pour toi.</span><a class="btn small" href="#moi">Moi</a></div>`:''}
-    <div class="days">${DAYS.map(([d,label])=>{const ks=SLOTS.map(([s])=>d+'-'+s);const dk=sum(ks.filter(k=>w.slots[k].mode!=='off'&&w.slots[k].recipe).map(k=>w.slots[k].recipe.kcal));
-      return`<section class="day"><div class="day-head"><h2>${label}</h2>${p.calOn&&dk?`<span class="muted num" style="font-size:13px">≈ ${nf0.format(dk)} kcal</span>`:''}</div>
-      ${SLOTS.map(([s,sl])=>{const k=d+'-'+s,slot=w.slots[k];return`<div class="slot"><div class="slot-head"><span class="slot-name">${sl}</span>${modeSeg(k,slot.mode)}</div>${mealCard(k)}</div>`}).join('')}</section>`}).join('')}</div>
-    <button class="btn block" data-act="newWeek" style="margin-top:8px">Nouvelle semaine depuis ma semaine type</button>
+    <div class="daystrip" role="tablist" aria-label="Jours">${DAYS.map(([x,l])=>{const k2=SLOTS.map(([s])=>x+'-'+s).filter(k=>w.slots[k].mode!=='off');
+      return`<button role="tab" class="dpill" data-act="day" data-day="${x}" aria-selected="${x===d}"><b>${l.slice(0,3)}</b><span class="dots">${k2.map(k=>`<i class="${w.slots[k].recipe?'full':''}"></i>`).join('')||'<i class="none"></i>'}</span></button>`}).join('')}</div>
+    <h2 class="dayname">${dl}</h2>
+    ${on.length?on.map(mealCard).join(''):`<div class="card empty-state"><p>Pas de repas prévu.</p></div>`}
+    ${off.length?`<div class="addmeals">${off.map(k=>{const s=k.split('-')[1];return`<button class="chip" data-act="timeSheet" data-slot="${k}">${I.plus}${(SLOTS.find(x=>x[0]===s)||[])[1]}</button>`}).join('')}</div>`:''}
+    <button class="btn block subtle" data-act="newWeek">${I.refresh} Nouvelle semaine</button>
   </div></main>`}
 
 /* ---- courses ---- */
-function itemRow(it){const done=!!D.shop.checked[it.key];if(done&&D.shop.hideDone)return'';const uses=[...it.uses];
-  return`<li><label class="item ${done?'done':''}"><input type="checkbox" data-act="check" data-key="${esc(it.key)}" ${done?'checked':''}><span class="nm">${esc(it.name)}<span class="for">${esc(uses.length>2?uses.length+' recettes':uses.join(' · '))}</span></span><span class="q num">${esc(shopQty(it.q,it.u))}</span></label></li>`}
+function itemRow(it){const done=!!D.shop.checked[it.key];if(done&&D.shop.hideDone)return'';
+  return`<li><label class="item ${done?'done':''}"><input type="checkbox" data-act="check" data-key="${esc(it.key)}" ${done?'checked':''}><span class="nm">${esc(it.name)}</span><span class="q num">${esc(shopQty(it.q,it.u))}</span></label></li>`}
 function vShop(){const{items,cost}=shoppingList(),extra=D.shop.extra;
   const main=items.filter(i=>!i.staple),stap=items.filter(i=>i.staple),left=main.filter(i=>!D.shop.checked[i.key]).length+extra.filter(e=>!e.done).length;
   const groups=RAYONS.map(r=>[r,main.filter(i=>i.r===r).sort((a,b)=>a.name.localeCompare(b.name,'fr'))]).filter(g=>g[1].length);
-  return band(`<h1>Courses</h1><p class="sub num">${left} article${left>1?'s':''} à prendre · ≈ ${eur(cost)} estimés</p>
-    <div class="row"><button class="btn dark small" data-act="shareList">${I.share} Partager la liste</button><button class="chip" data-act="hideDone" aria-pressed="${D.shop.hideDone}">Masquer ce qui est pris</button></div>`)+
+  return band(`<div class="between"><h1>Courses</h1><span class="pill num">${left} · ≈ ${eur(cost)}</span></div>
+    <div class="row quick"><button class="qchip dark" data-act="shareList">${I.share}<span>Partager</span></button><button class="qchip" data-act="hideDone" aria-pressed="${D.shop.hideDone}">${I.close.replace('stroke-width="2.4"','stroke-width="2"')}<span>Masquer pris</span></button></div>`,'compact')+
   `<main class="gutter"><div class="wrap stack">
-    <form class="row" data-form="extra" style="flex-wrap:nowrap"><input type="text" id="extra-input" placeholder="Ajouter (café, lessive, fruits…)" aria-label="Ajouter un article" enterkeyhint="done"><button class="btn primary" type="submit" aria-label="Ajouter">${I.plus}</button></form>
-    ${!items.length&&!extra.length?`<div class="card empty-state"><h3>Rien à acheter pour l’instant</h3><p>Génère ta semaine : la liste se remplit toute seule, triée par rayon.</p><a class="btn primary" href="#semaine">Planifier ma semaine</a></div>`:''}
+    <form class="row nowrap" data-form="extra"><input type="text" id="extra-input" placeholder="Ajouter (café, lessive…)" aria-label="Ajouter un article" enterkeyhint="done"><button class="btn primary" type="submit" aria-label="Ajouter">${I.plus}</button></form>
+    ${!items.length&&!extra.length?`<div class="card empty-state"><h3>Liste vide</h3><a class="btn primary" href="#semaine">Planifier ma semaine</a></div>`:''}
     ${groups.map(([r,l])=>`<div class="card aisle"><h3>${esc(r)}<span class="muted num">${l.length}</span></h3><ul>${l.map(itemRow).join('')}</ul></div>`).join('')}
-    ${extra.length?`<div class="card aisle"><h3>Autres articles</h3><ul>${extra.map(e=>(e.done&&D.shop.hideDone)?'':`<li class="xrow"><label class="item ${e.done?'done':''}"><input type="checkbox" data-act="checkExtra" data-id="${e.id}" ${e.done?'checked':''}><span class="nm">${esc(e.text)}</span><span></span></label><button class="icon-btn" data-act="delExtra" data-id="${e.id}" aria-label="Retirer ${esc(e.text)}">${I.close}</button></li>`).join('')}</ul></div>`:''}
-    ${stap.length?`<div class="card aisle"><h3>Dans tes placards ?</h3><p class="muted" style="font-size:13px;margin-bottom:4px">Les basiques utilisés cette semaine. Coche ce que tu as déjà.</p><ul>${stap.sort((a,b)=>a.name.localeCompare(b.name,'fr')).map(itemRow).join('')}</ul></div>`:''}
+    ${extra.length?`<div class="card aisle"><h3>Autres</h3><ul>${extra.map(e=>(e.done&&D.shop.hideDone)?'':`<li class="xrow"><label class="item ${e.done?'done':''}"><input type="checkbox" data-act="checkExtra" data-id="${e.id}" ${e.done?'checked':''}><span class="nm">${esc(e.text)}</span><span></span></label><button class="icon-btn" data-act="delExtra" data-id="${e.id}" aria-label="Retirer ${esc(e.text)}">${I.close}</button></li>`).join('')}</ul></div>`:''}
+    ${stap.length?`<div class="card aisle"><h3>Placards (à vérifier)</h3><ul>${stap.sort((a,b)=>a.name.localeCompare(b.name,'fr')).map(itemRow).join('')}</ul></div>`:''}
   </div></main>`}
 
 /* ---- idées ---- */
-function slotOptions(){return`<option value="">Ajouter à la semaine…</option>`+DAYS.map(([d,l])=>SLOTS.map(([s,sl])=>{const k=d+'-'+s,x=D.week.slots[k];return`<option value="${k}">${l} ${sl.toLowerCase()}${x.recipe&&x.mode!=='off'?' (remplace)':''}</option>`}).join('')).join('')}
-function rcard(r,type,i){return`<article class="card rcard"><div class="row"><span class="tag ${esc(r.mode)}">${esc(MODES[r.mode]?.label||'')}</span>${inSeason(r)?'<span class="tag season">De saison</span>':''}<span class="muted num" style="font-size:13px">${esc(meta(r))}</span></div>
-  <h3>${esc(r.name)}</h3>${r.desc?`<p>${esc(r.desc)}</p>`:''}
-  <div class="foot"><button class="btn small" data-act="openList" data-type="${type}" data-i="${i}">Voir</button>
-  <button class="icon-btn fav ${isFav(r)?'on':''}" data-act="favList" data-type="${type}" data-i="${i}" aria-label="Favori">${I.heart}</button>
-  <select data-act="addList" data-type="${type}" data-i="${i}" aria-label="Ajouter à la semaine">${slotOptions()}</select></div></article>`}
+function slotOptions(){return`<option value="">Ajouter à…</option>`+DAYS.map(([d,l])=>`<optgroup label="${l}">${SLOTS.map(([s,sl])=>{const k=d+'-'+s,x=D.week.slots[k];return`<option value="${k}">${l} · ${sl.toLowerCase()}${x.recipe&&x.mode!=='off'?' (remplace)':''}</option>`}).join('')}</optgroup>`).join('')}
+function rcard(r,type,i){return`<article class="card rcard"><button class="meal-open" data-act="openList" data-type="${type}" data-i="${i}"><span class="meal-name">${esc(r.name)}</span><span class="meal-meta num">${esc(meta(r))}</span></button>
+  <div class="meal-foot"><span class="tags"><span class="tag ${esc(r.mode)}">${esc(MODES[r.mode]?.short||'')}</span>${tagsFor(r)}</span>
+  <span class="meal-acts"><button class="icon-btn fav ${isFav(r)?'on':''}" data-act="favList" data-type="${type}" data-i="${i}" aria-label="Favori">${I.heart}</button></span></div>
+  <select data-act="addList" data-type="${type}" data-i="${i}" aria-label="Ajouter à la semaine">${slotOptions()}</select></article>`}
 function vIdeas(){const f=UI.ideaForm,g=UI.gen;
-  return band(`<h1>Idées</h1><p class="sub">Une envie, un reste à finir, un soir sans idée : trois recettes pour toi.</p>`)+
+  return band(`<h1>Idées</h1>`,'compact')+
   `<main class="gutter"><div class="wrap stack"><form class="card stack" data-form="ideas">
-    <div><label class="lbl" for="idea-envie">J’ai envie de…</label><input type="text" id="idea-envie" data-bind="ideaForm.envie" value="${esc(f.envie)}" placeholder="ex. croustillant et épicé, une soupe-repas"></div>
-    <div><label class="lbl" for="idea-use">Ingrédients à finir</label><input type="text" id="idea-use" data-bind="ideaForm.use" value="${esc(f.use)}" placeholder="ex. 2 courgettes, un reste de crème"></div>
-    <div><span class="lbl">Temps</span><div class="seg modes full" role="group">${['express','normal','long'].map(m=>`<button type="button" data-act="ideaMode" data-mode="${m}" aria-pressed="${f.mode===m}">${MODES[m].short}</button>`).join('')}</div></div>
-    <div><span class="lbl">Originalité</span><div class="seg full" role="group">${AUDACE.map(([id,l])=>`<button type="button" data-act="ideaAudace" data-val="${id}" aria-pressed="${f.audace===id}">${l}</button>`).join('')}</div></div>
-    <div class="row"><button type="button" class="chip" data-act="season" aria-pressed="${D.profile.season}">${I.leaf} De saison</button></div>
-    <button class="btn primary block" type="submit" ${g?'disabled':''}>${I.spark} Trouver des idées</button>
+    <input type="text" id="idea-envie" data-bind="ideaForm.envie" value="${esc(f.envie)}" placeholder="J’ai envie de… (croustillant, soupe…)" aria-label="J’ai envie de">
+    <input type="text" id="idea-use" data-bind="ideaForm.use" value="${esc(f.use)}" placeholder="À finir : 2 courgettes, crème…" aria-label="Ingrédients à finir">
+    <div class="timeopts small">${['express','normal','long'].map(m=>`<button type="button" class="topt" data-act="ideaMode" data-mode="${m}" data-tone="${m}" aria-pressed="${f.mode===m}">${MODE_ICON[m]}<b>${MODES[m].short}</b></button>`).join('')}</div>
+    <div class="row quick"><button type="button" class="qchip light" data-act="season" aria-pressed="${D.profile.season}">${I.leaf}<span>Saison</span></button>
+      <button type="button" class="qchip light" data-act="ideaAudaceCycle">${I.spark}<span>${AUDACE_SHORT[f.audace]}</span></button></div>
+    <button class="btn primary block" type="submit" ${g?'disabled':''}>${I.spark} Trouver 3 idées</button>
     ${g&&g.kind==='ideas'?progressHTML():''}</form>
-    ${UI.ideas.length?UI.ideas.map((r,i)=>rcard(r,'idea',i)).join(''):`<div class="card empty-state"><h3>Pas encore d’idées</h3><p>Décris ton envie et lance la recherche.</p></div>`}
+    ${UI.ideas.length?UI.ideas.map((r,i)=>rcard(r,'idea',i)).join(''):''}
   </div></main>`}
 
-/* ---- carnet : mes recettes et favoris ---- */
+/* ---- carnet ---- */
 function vCarnet(){const t=UI.carnetTab,list=t==='mine'?D.mine:D.favs;
-  return band(`<h1>Carnet</h1><p class="sub">Tes recettes et celles que tu veux refaire.</p>
-    <div class="seg" role="group"><button data-act="carnetTab" data-val="mine" aria-pressed="${t==='mine'}">Mes recettes · ${D.mine.length}</button><button data-act="carnetTab" data-val="favs" aria-pressed="${t==='favs'}">Favoris · ${D.favs.length}</button></div>`)+
+  return band(`<div class="between"><h1>Carnet</h1>${t==='mine'?`<button class="btn dark small" data-act="newRecipe">${I.plus}<span>Ajouter</span></button>`:''}</div>
+    <div class="seg" role="group"><button data-act="carnetTab" data-val="mine" aria-pressed="${t==='mine'}">Mes recettes · ${D.mine.length}</button><button data-act="carnetTab" data-val="favs" aria-pressed="${t==='favs'}">Favoris · ${D.favs.length}</button></div>`,'compact')+
   `<main class="gutter"><div class="wrap stack">
-    ${t==='mine'?`<button class="btn primary block" data-act="newRecipe">${I.plus} Ajouter une recette</button>`:''}
-    ${list.length?list.map((r,i)=>rcard(r,t,i)).join(''):t==='mine'?`<div class="card empty-state"><h3>Ton carnet est vide</h3><p>Ajoute la quiche de ta grand-mère ou colle une recette trouvée en ligne : Bidou la range au bon format.</p></div>`:`<div class="card empty-state"><h3>Aucun favori</h3><p>Touche le cœur sur un repas ou une idée pour le garder ici.</p></div>`}
+    ${list.length?list.map((r,i)=>rcard(r,t,i)).join(''):t==='mine'?`<div class="card empty-state">${I.book.replace('<svg','<svg width="40" height="40"')}<h3>Ton carnet est vide</h3><button class="btn primary" data-act="newRecipe">${I.plus} Ajouter une recette</button></div>`:`<div class="card empty-state">${I.heart.replace('<svg','<svg width="40" height="40"')}<h3>Aucun favori</h3><p>Touche le cœur sur une recette.</p></div>`}
   </div></main>`}
 
-/* ---- moi ---- */
-function vMe(){const p=D.profile,x=SB.sess();
-  return band(`<h1>Moi</h1><p class="sub">Tes goûts, ta semaine type et ton compte.</p>`)+
+/* ---- moi : un menu, chaque réglage s’ouvre en plein écran ---- */
+const SECTIONS={
+  table:['À table',ICO.users,householdEditor],
+  meals:['Mes repas',I.cal,()=>mealsEditor()+'<h3 class="sec-sub">Temps</h3>'+timeEditor()],
+  gear:['Mon matériel',ICO.pot,gearEditor],
+  cuisines:['Mes cuisines',ICO.globe,()=>cuisineEditor()+likesField('likes2')],
+  dislikes:['Je n’aime pas',ICO.no,dislikeEditor],
+  allergies:['Allergies et régime',ICO.alert,allergyEditor],
+  options:['Options',ICO.sliders,optionsEditor],
+  theme:['Apparence',ICO.moon,themeEditor]};
+function secSummary(id){const p=D.profile;
+  if(id==='table')return`${p.household} pers. · ${(LEVELS.find(l=>l[0]===p.level)||LEVELS[1])[1]}`;
+  if(id==='meals')return SLOTS.filter(([s])=>p.meals[s].days.length).map(([s,l])=>`${l} ${p.meals[s].days.length} j`).join(' · ')||'Aucun';
+  if(id==='gear')return`${p.gear.length} équipement${p.gear.length>1?'s':''}`;
+  if(id==='cuisines')return p.cuisines.includes('tout')?'Tout':p.cuisines.map(c=>CUISINE_LABEL[c]).slice(0,3).join(', ')+(p.cuisines.length>3?'…':'')||'—';
+  if(id==='dislikes')return p.dislikes.length?`${p.dislikes.length} ingrédient${p.dislikes.length>1?'s':''}`:'Rien';
+  if(id==='allergies')return p.allergens.length?p.allergens.map(a=>ALLERGEN_LABEL[a]).join(', '):'Aucune';
+  if(id==='options')return[p.season?'Saison':'',p.budgetOn?p.budget+' €':'',p.calOn?p.kcal+' kcal':''].filter(Boolean).join(' · ')||'—';
+  if(id==='theme')return{auto:'Auto',light:'Clair',dark:'Sombre'}[p.theme]||'Auto'}
+function vMe(){const x=SB.sess();
+  return band(`<h1>Moi</h1>`,'compact')+
   `<main class="gutter"><div class="wrap stack">
-    <h2 class="section-title">Compte</h2>
-    <div class="card stack">${!SB.on()?`<p class="muted">La sauvegarde en ligne n’est pas encore configurée (voir LISEZMOI). Tes données restent sur cet appareil.</p>`:
-      x?`<div class="between"><div><b>${esc(x.email||'')}</b><p class="muted" style="font-size:13px">Tes données sont sauvegardées et synchronisées.</p></div></div>
-        <div class="row"><button class="btn small" data-act="changePw">Changer le mot de passe</button><button class="btn small" data-act="logout">Se déconnecter</button></div>`:
-      `<p class="muted">Crée un compte pour sauvegarder tes données et recevoir des recettes inventées par Claude.</p><div class="row"><button class="btn primary small" data-act="goSignup">Créer un compte</button><button class="btn small" data-act="goLogin">Se connecter</button></div>`}</div>
-    <h2 class="section-title">À table</h2>
-    <div class="card stack"><div class="between"><b>Nombre de personnes</b><div class="stepper"><button data-act="household" data-d="-1" aria-label="Moins">−</button><span class="num">${p.household}</span><button data-act="household" data-d="1" aria-label="Plus">+</button></div></div>
-      <div><span class="lbl">Niveau en cuisine</span><div class="seg full" role="group">${LEVELS.map(([id,l])=>`<button data-act="level" data-val="${id}" aria-pressed="${p.level===id}">${l}</button>`).join('')}</div></div></div>
-    <h2 class="section-title">Ma semaine type</h2>${planEditor()}
-    <h2 class="section-title">Mon matériel</h2>
-    <div class="card"><div class="chips">${GEAR.map(g=>`<button class="chip" data-act="toggleArr" data-field="gear" data-val="${esc(g)}" aria-pressed="${p.gear.includes(g)}">${esc(g)}</button>`).join('')}</div></div>
-    <h2 class="section-title">Ce que j’aime</h2>
-    <div class="card stack"><div class="chips">${CUISINES.map(c=>`<button class="chip" data-act="toggleArr" data-field="cuisines" data-val="${esc(c)}" aria-pressed="${p.cuisines.includes(c)}">${esc(c)}</button>`).join('')}</div>
-      <textarea id="likes2" data-bind="profile.likes" aria-label="Ce que j’aime en quelques mots" placeholder="ex. j’adore le fromage, les plats épicés">${esc(p.likes)}</textarea></div>
-    <h2 class="section-title">Je n’aime pas</h2><div class="card stack">${tagInput('dislikes',p.dislikes,'ex. coriandre, betterave')}</div>
-    <h2 class="section-title">Régime et allergies</h2>
-    <div class="card stack"><div class="chips">${DIETS.map(d=>`<button class="chip" data-act="toggleArr" data-field="diet" data-val="${esc(d)}" aria-pressed="${p.diet.includes(d)}">${esc(d)}</button>`).join('')}</div>${tagInput('allergies',p.diet.filter(d=>!DIETS.includes(d)),'Autre allergie ou contrainte')}</div>
-    <h2 class="section-title">Options</h2>${optionsEditor()}
-    <h2 class="section-title">Apparence</h2>
-    <div class="card"><div class="seg full" role="group">${[['auto','Auto'],['light','Clair'],['dark','Sombre']].map(([id,l])=>`<button data-act="theme" data-val="${id}" aria-pressed="${p.theme===id}">${l}</button>`).join('')}</div></div>
-    ${standalone()?'':`<h2 class="section-title">Installer l’appli</h2><div class="card stack">${UI.install?`<button class="btn primary" data-act="install">${I.share} Installer Bidou</button>`:''}
-      <p style="font-size:14px"><b>iPhone</b> : dans Safari, touche <b>Partager</b> puis <b>Sur l’écran d’accueil</b>.</p>
-      <p style="font-size:14px"><b>Fairphone / Android</b> : dans Chrome, menu <b>⋮</b> puis <b>Installer l’application</b> (ou « Ajouter à l’écran d’accueil »).</p></div>`}
-    <p class="muted" style="text-align:center;font-size:12px;margin-top:8px">Bidou · ${APP_VER}</p>
+    <div class="card account">${!SB.on()?`<span class="avatar">${ICO.person}</span><p class="muted">Données sur cet appareil.</p>`:
+      x?`<span class="avatar">${esc((x.email||'?')[0].toUpperCase())}</span><div class="acc-txt"><b>${esc(x.email||'')}</b><span class="muted">Sauvegardé</span></div><button class="btn small" data-act="accountSheet">Gérer</button>`:
+      `<span class="avatar">${ICO.person}</span><div class="acc-txt"><b>Pas connecté</b><span class="muted">Pour sauvegarder</span></div><button class="btn primary small" data-act="goLogin">Se connecter</button>`}</div>
+    <nav class="menu card" aria-label="Réglages">${Object.entries(SECTIONS).map(([id,[t,ic]])=>`<button class="menurow" data-act="openEdit" data-sec="${id}"><span class="mic">${ic}</span><span class="mt"><b>${t}</b><span class="muted">${esc(secSummary(id))}</span></span>${ICO.chev}</button>`).join('')}</nav>
+    ${standalone()?'':`<nav class="menu card"><button class="menurow" data-act="installSheet"><span class="mic">${ICO.phone}</span><span class="mt"><b>Installer l’appli</b><span class="muted">Sur l’écran d’accueil</span></span>${ICO.chev}</button></nav>`}
+    <p class="muted" style="text-align:center;font-size:12px">Bidou · ${APP_VER}</p>
   </div></main>`}
 
 /* ---- feuilles : fiche recette, éditeur, mot de passe ---- */
@@ -608,11 +757,21 @@ function renderSheet(){const box=$('#sheet'),s=UI.sheet;if(!s){box.hidden=true;b
     <form class="stack" data-form="pw"><input type="password" id="np" autocomplete="new-password" minlength="6" placeholder="6 caractères minimum" aria-label="Nouveau mot de passe"><button class="btn primary block" type="submit">Enregistrer</button></form></div></div>`;
   else if(s.type==='confirm')html=`<div class="sheet-wrap modal" data-act="sheetBg"><div class="panel"><h2>${esc(s.title)}</h2><p class="muted">${esc(s.text)}</p>
     <div class="row" style="justify-content:flex-end"><button class="btn" data-act="closeSheet">Annuler</button><button class="btn primary" data-act="confirmYes">${esc(s.yes)}</button></div></div></div>`;
+  else if(s.type==='time'){const cur=D.week.slots[s.slot].mode;html=`<div class="sheet-wrap modal" data-act="sheetBg"><div class="panel"><div class="between"><h2>${esc(dayLabel(s.slot))}</h2><button class="icon-btn" data-act="closeSheet" aria-label="Fermer">${I.close}</button></div>
+    <div class="timeopts big">${MODE_KEYS.map(m=>`<button class="topt" data-act="setTime" data-mode="${m}" data-tone="${m}" aria-pressed="${cur===m}">${MODE_ICON[m]}<b>${m==='off'?'Aucun':MODES[m].short}</b><span>${m==='off'?'Pas de repas':MODES[m].label}</span></button>`).join('')}</div></div></div>`}
+  else if(s.type==='edit'){const[t,,ed]=SECTIONS[s.sec];html=`<div class="sheet-wrap" role="dialog" aria-modal="true" aria-label="${esc(t)}"><header class="band gutter compact"><div class="wrap"><div class="between"><button class="icon-btn" data-act="closeSheet" aria-label="Retour" style="background:var(--band-soft);color:inherit">${I.back}</button><h1 style="font-size:24px">${esc(t)}</h1><span style="width:42px"></span></div></div></header>
+    <main class="gutter" style="padding-bottom:32px"><div class="wrap stack">${ed()}<button class="btn primary block" data-act="closeSheet">Terminé</button></div></main></div>`}
+  else if(s.type==='account'){const x=SB.sess()||{};html=`<div class="sheet-wrap modal" data-act="sheetBg"><div class="panel"><div class="between"><h2>Mon compte</h2><button class="icon-btn" data-act="closeSheet" aria-label="Fermer">${I.close}</button></div>
+    <p class="muted">${esc(x.email||'')}</p><button class="btn block" data-act="changePw">Changer le mot de passe</button><button class="btn block" data-act="logout">Se déconnecter</button></div></div>`}
+  else if(s.type==='install')html=`<div class="sheet-wrap modal" data-act="sheetBg"><div class="panel"><div class="between"><h2>Installer Bidou</h2><button class="icon-btn" data-act="closeSheet" aria-label="Fermer">${I.close}</button></div>
+    ${UI.install?`<button class="btn primary block" data-act="install">${I.share} Installer maintenant</button>`:''}
+    <div class="menu card"><div class="menurow static"><span class="mic">${ICO.phone}</span><span class="mt"><b>iPhone</b><span class="muted">Safari › Partager › Sur l’écran d’accueil</span></span></div>
+    <div class="menurow static"><span class="mic">${ICO.phone}</span><span class="mt"><b>Fairphone / Android</b><span class="muted">Chrome › ⋮ › Installer l’application</span></span></div></div></div></div>`;
   else if(s.type==='copy')html=`<div class="sheet-wrap modal" data-act="sheetBg"><div class="panel"><div class="between"><h2>Ta liste</h2><button class="icon-btn" data-act="closeSheet" aria-label="Fermer">${I.close}</button></div><textarea id="copy-area" rows="14" readonly>${esc(s.text)}</textarea></div></div>`;
   const old=box.querySelector('.sheet-wrap'),same=old&&box.dataset.key===sheetKey(s),top=same?old.scrollTop:0;
   box.innerHTML=html;box.hidden=false;box.dataset.key=sheetKey(s);document.body.style.overflow='hidden';
   const nw=box.querySelector('.sheet-wrap');if(nw&&top)nw.scrollTop=top}
-function sheetKey(s){return[s.type,s.slot||'',s.i==null?'':s.i].join(':')}
+function sheetKey(s){return[s.type,s.slot||'',s.i==null?'':s.i,s.sec||''].join(':')}
 function vRecipe(r,s){const por=s.type==='slot'?portionsOf(s.slot):(s.portions||D.profile.household);
   return`<div class="sheet-wrap" role="dialog" aria-modal="true" aria-labelledby="r-title">
   <header class="band r-band gutter"><div class="wrap">
@@ -625,9 +784,11 @@ function vRecipe(r,s){const por=s.type==='slot'?portionsOf(s.slot):(s.portions||
       <div class="fact"><b>${r.kcal?nf0.format(r.kcal)+' kcal':'—'}</b><span>${r.prot?nf0.format(r.prot)+' g protéines':'par portion'}</span></div></div>
   </div></header>
   <main class="gutter" style="padding-bottom:24px"><div class="wrap stack">
+    ${(()=>{const al=allergensOf(r),ua=userAlerts(r);return(ua.length?`<div class="notice danger" role="alert"><span><b>Attention :</b> cette recette contient ${esc(ua.map(a=>ALLERGEN_LABEL[a]).join(', '))}, que tu as indiqué dans tes allergies.</span></div>`:'')+
+      (al.length?`<div class="allergens"><span class="lbl" style="margin:0">Allergènes</span>${al.map(a=>`<span class="tag ${ua.includes(a)?'danger':'mine'}">${esc(ALLERGEN_LABEL[a])}</span>`).join('')}</div>`:'')})()}
     <section class="card"><div class="between" style="padding:2px 0 6px"><h2 style="font-size:19px">Ingrédients</h2>
       <div class="stepper"><button data-act="portions" data-d="-1" aria-label="Moins de portions">−</button><span class="num" style="font-size:14px;min-width:60px">${por} pers.</span><button data-act="portions" data-d="1" aria-label="Plus de portions">+</button></div></div>
-      <ul class="ing">${(r.ing||[]).map((i,ix)=>`<li><label><input type="checkbox" id="ing-${ix}"><span>${esc(i.n)}</span><span class="q num">${esc(ingQty(i,por))}</span></label></li>`).join('')}</ul></section>
+      <ul class="ing">${(r.ing||[]).map((i,ix)=>{const f=ingFlags(i);return`<li class="${f.al.length?'danger':f.dis?'disliked':''}"><label><input type="checkbox" id="ing-${ix}"><span>${esc(i.n)}${f.al.length?`<small class="flag-al">Allergène : ${esc(f.al.join(', '))}</small>`:f.dis?'<small class="flag-dis">Tu n’aimes pas</small>':''}</span><span class="q num">${esc(ingQty(i,por))}</span></label></li>`}).join('')}</ul></section>
     <section class="card stack"><h2 style="font-size:19px">Préparation</h2><ol class="steps">${(r.steps||[]).map(x=>`<li><span>${esc(x)}</span></li>`).join('')}</ol>
       ${r.tip?`<p class="tip"><b>Astuce · </b>${esc(r.tip)}</p>`:''}</section>
     ${(r.gear||[]).length?`<p class="muted" style="font-size:13px;padding:0 4px">Matériel : ${esc(r.gear.join(', '))}${r.diff?' · '+esc(r.diff):''}</p>`:''}
@@ -674,20 +835,20 @@ async function generateWeek(){const keys=activeSlots().filter(k=>!D.week.slots[k
       if(raw&&raw.mine){const m=D.mine.find(x=>x.id===raw.mine);if(m){D.week.slots[k].recipe=clone(m);ok++;return}}
       const r=cleanRecipe(raw,D.week.slots[k].mode);if(r){D.week.slots[k].recipe=r;ok++}});
     if(!ok)throw{code:'invalid_json'};
-    toast(ok<keys.length?`${ok} repas sur ${keys.length} générés. Utilise « Autre idée » pour les autres.`:'Ta semaine est prête. La liste de courses aussi.');finishWeek()}
+    toast(ok<keys.length?`${ok} repas sur ${keys.length} générés.`:'Ta semaine est prête !');finishWeek()}
   catch(e){if(e&&e.code==='cancelled'){}else if(e&&FALLBACK.includes(e.code)){fillFromLibrary(keys);finishWeek();toast(chefErr(e))}else toast(chefErr(e))}
   finally{UI.gen=null;render()}}
 function finishWeek(){D.week.createdAt=new Date().toISOString();D.shop.checked={};save()}
 async function replaceSlot(k){if(UI.busy[k])return;UI.busy[k]=true;if(UI.sheet&&UI.sheet.slot===k)closeSheet();render();
   try{const text=await askChef(replacePrompt(k),{max:4000});const raw=parseJSON(text);const r=cleanRecipe(Array.isArray(raw)?raw[0]:(raw&&raw.recipe)||raw,D.week.slots[k].mode);
     if(!r)throw{code:'invalid_json'};D.week.slots[k].recipe=r;save()}
-  catch(e){if(e&&FALLBACK.includes(e.code)){const avoid=activeSlots().filter(x=>D.week.slots[x].recipe).map(x=>D.week.slots[x].recipe.name);const r=libPick(D.week.slots[k].mode,avoid);if(r){D.week.slots[k].recipe=r;save()}toast(chefErr(e))}else if(!e||e.code!=='cancelled')toast(chefErr(e))}
+  catch(e){if(e&&FALLBACK.includes(e.code)){const avoid=activeSlots().filter(x=>D.week.slots[x].recipe).map(x=>D.week.slots[x].recipe.name);const r=libPick(D.week.slots[k].mode,avoid,kindOf(k));if(r){D.week.slots[k].recipe=r;save()}toast(chefErr(e))}else if(!e||e.code!=='cancelled')toast(chefErr(e))}
   finally{delete UI.busy[k];render()}}
 async function findIdeas(){const ctl=new AbortController();UI.gen={kind:'ideas',n:0,total:3,ctl};render();
   try{const text=await askChef(ideasPrompt(),{signal:ctl.signal,max:9000,onText:t=>updateProgress(Math.min(3,countNames(t)))});
     const res=parseJSON(text),arr=(Array.isArray(res)?res:(res&&res.recipes)||[]).map(o=>cleanRecipe(o,UI.ideaForm.mode)).filter(Boolean);
     if(!arr.length)throw{code:'invalid_json'};UI.ideas=arr;LS.set('bidou_ideas',JSON.stringify(arr))}
-  catch(e){if(e&&FALLBACK.includes(e.code)){let pool=LIB.filter(r=>r.mode===UI.ideaForm.mode);UI.ideas=clone(pool.sort(()=>Math.random()-.5).slice(0,3));toast(chefErr(e))}else if(!e||e.code!=='cancelled')toast(chefErr(e))}
+  catch(e){if(e&&FALLBACK.includes(e.code)){let pool=LIB.filter(r=>r.kind==='repas'&&r.mode===UI.ideaForm.mode&&!userAlerts(r).length);UI.ideas=clone(pool.sort(()=>Math.random()-.5).slice(0,3));toast(chefErr(e))}else if(!e||e.code!=='cancelled')toast(chefErr(e))}
   finally{UI.gen=null;render()}}
 async function importPaste(){const s=UI.sheet,txt=($('#paste-text')||{}).value||'';s.paste=txt;if(txt.trim().length<30){toast('Colle une recette un peu plus complète.');return}
   UI.gen={kind:'import',n:0,total:1};renderSheet();
@@ -706,7 +867,7 @@ function toggleFav(r){if(!r)return;const i=D.favs.findIndex(f=>f.name===r.name);
   if(i>=0){D.favs.splice(i,1);toast('Retiré des favoris.')}else{if(D.favs.length>=200){toast('200 favoris maximum.');return}D.favs.unshift(clone(r));toast('Ajouté aux favoris.')}save();render()}
 function addToSlot(r,k){if(!r||!k)return;const s=D.week.slots[k];s.recipe=clone(r);if(s.mode==='off'||r.total>MODES[s.mode].max)s.mode=r.mode;save();toast('Ajouté : '+dayLabel(k)+'.');render()}
 function listItem(type,i){return type==='idea'?UI.ideas[i]:type==='mine'?D.mine[i]:D.favs[i]}
-function newWeek(){const old=D.week;D.week=weekFromPlan(D.profile.plan);for(const k in D.week.slots){if(old.slots[k]&&old.slots[k].pinned&&old.slots[k].recipe&&D.week.slots[k].mode!=='off'){D.week.slots[k].recipe=old.slots[k].recipe;D.week.slots[k].pinned=true}}D.week.audace=old.audace;D.shop.checked={};save();render();toast('Nouvelle semaine prête à générer.')}
+function newWeek(){const old=D.week;D.profile.plan=computePlan(D.profile);D.week=weekFromPlan(D.profile.plan);for(const k in D.week.slots){if(old.slots[k]&&old.slots[k].pinned&&old.slots[k].recipe&&D.week.slots[k].mode!=='off'){D.week.slots[k].recipe=old.slots[k].recipe;D.week.slots[k].pinned=true}}D.week.audace=old.audace;D.shop.checked={};save();render();toast('Nouvelle semaine prête à générer.')}
 
 const A={
   start(){UI.screen='onboard';UI.ob=0;render();scrollTo(0,0)},
@@ -717,11 +878,23 @@ const A={
   async forgot(){const em=($('#au-email')||{}).value||'';if(!em){UI.authErr='Indique ton e-mail.';render();return}try{await SB.recover(em);toast('E-mail envoyé : suis le lien pour choisir un nouveau mot de passe.')}catch(e){UI.authErr=authErr(e);render()}},
   obNext(){UI.ob++;render();scrollTo(0,0)},
   obBack(){if(UI.ob===0){UI.screen=null;render();return}UI.ob--;render();scrollTo(0,0)},
-  obFinish(){D.profile.setup=true;D.week=weekFromPlan(D.profile.plan);UI.screen=null;save();location.hash='#semaine';render();scrollTo(0,0)},
+  obFinish(){D.profile.setup=true;D.profile.plan=computePlan(D.profile);D.week=weekFromPlan(D.profile.plan);UI.screen=null;save();location.hash='#semaine';render();scrollTo(0,0)},
   household(b){D.profile.household=Math.max(1,Math.min(12,D.profile.household+ +b.dataset.d));save();render()},
+  cuisine(b){const p=D.profile,v=b.dataset.val;if(v==='tout'){p.cuisines=p.cuisines.includes('tout')?[]:['tout']}else{p.cuisines=p.cuisines.filter(c=>c!=='tout');const i=p.cuisines.indexOf(v);if(i>=0)p.cuisines.splice(i,1);else p.cuisines.push(v)}save();render()},
   toggleArr(b){const a=D.profile[b.dataset.field],v=b.dataset.val,i=a.indexOf(v);if(i>=0)a.splice(i,1);else a.push(v);save();render()},
-  untag(b){const p=D.profile,f=b.dataset.field,i=+b.dataset.i;if(f==='allergies'){const ex=p.diet.filter(d=>!DIETS.includes(d));p.diet=p.diet.filter(d=>d!==ex[i])}else p[f].splice(i,1);save();render()},
-  planMode(b){D.profile.plan[b.dataset.slot]=b.dataset.mode;if(!D.week.createdAt){const s=D.week.slots[b.dataset.slot];if(s&&!s.recipe)s.mode=b.dataset.mode}save();render()},
+  untag(b){const p=D.profile,f=b.dataset.field,i=+b.dataset.i;if(f==='allergies'){const ex=p.diet.filter(d=>!DIETS.includes(d));p.diet=p.diet.filter(d=>d!==ex[i])}else if(f==='dislikesCustom'){const ex=p.dislikes.filter(d=>!DISLIKES.includes(d));p.dislikes=p.dislikes.filter(d=>d!==ex[i])}else p[f].splice(i,1);save();render()},
+  mealAll(b){const m=D.profile.meals[b.dataset.slot];m.days=m.days.length?[]:ALLDAYS.slice();applyPlan()},
+  mealDay(b){const m=D.profile.meals[b.dataset.slot],d=b.dataset.day,i=m.days.indexOf(d);if(i>=0)m.days.splice(i,1);else m.days.push(d);applyPlan()},
+  mealMode(b){D.profile.meals[b.dataset.slot].mode=b.dataset.mode;applyPlan()},
+  weekendLong(b){D.profile.weekendLong=b.checked;applyPlan()},
+  day(b){UI.day=b.dataset.day;render()},
+  timeSheet(b){openSheet({type:'time',slot:b.dataset.slot})},
+  setTime(b){const k=UI.sheet.slot;D.week.slots[k].mode=b.dataset.mode;closeSheet();save();render()},
+  audaceCycle(){const o=['classique','audace','surprise'];D.week.audace=o[(o.indexOf(D.week.audace||'audace')+1)%3];save();render()},
+  ideaAudaceCycle(){const o=['classique','audace','surprise'];UI.ideaForm.audace=o[(o.indexOf(UI.ideaForm.audace)+1)%3];render()},
+  openEdit(b){openSheet({type:'edit',sec:b.dataset.sec})},
+  accountSheet(){openSheet({type:'account'})},
+  installSheet(){openSheet({type:'install'})},
   opt(b){D.profile[b.dataset.field]=b.checked;save();render()},
   level(b){D.profile.level=b.dataset.val;save();render()},
   theme(b){D.profile.theme=b.dataset.val;save();render()},
@@ -758,7 +931,7 @@ const A={
   favSheet(){toggleFav(sheetRecipe())},
   addSheet(){const k=($('#sheet-slot')||{}).value;if(!k){toast('Choisis un jour et un repas.');return}const r=sheetRecipe();closeSheet();addToSlot(r,k)},
   changePw(){openSheet({type:'password'})},
-  async logout(){await SB.logout();SYNC='local';toast('Déconnecté. Tes données restent sur cet appareil.');render()},
+  async logout(){closeSheet();await SB.logout();SYNC='local';toast('Déconnecté. Tes données restent sur cet appareil.');render()},
   async install(){const p=UI.install;if(!p)return;UI.install=null;try{p.prompt();await p.userChoice}catch(e){}render()}
 };
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.tagName==='SELECT')return;const f=A[b.dataset.act];if(f)f(b,e)});
@@ -770,7 +943,7 @@ document.addEventListener('submit',async e=>{e.preventDefault();const f=e.target
   if(k==='ideas'){findIdeas();return}
   if(k==='extra'){const inp=$('#extra-input'),t=inp.value.trim();if(!t)return;D.shop.extra.push({id:uid(),text:t,done:false});save();render();($('#extra-input')||{}).focus&&$('#extra-input').focus();return}
   if(k==='tag'){const field=f.dataset.field,inp=f.querySelector('input'),t=inp.value.trim();if(!t)return;const p=D.profile;
-    if(field==='allergies'){if(!p.diet.includes(t))p.diet.push(t)}else if(!p[field].includes(t))p[field].push(t);save();render();const n=document.getElementById('tag-'+field);n&&n.focus();return}
+    if(field==='allergies'){if(!p.diet.includes(t))p.diet.push(t)}else if(field==='dislikesCustom'){if(!p.dislikes.includes(t))p.dislikes.push(t)}else if(!p[field].includes(t))p[field].push(t);save();render();const n=document.getElementById('tag-'+field);n&&n.focus();return}
   if(k==='editor'){saveEditor();return}
   if(k==='pw'){const pw=($('#np')||{}).value||'';if(pw.length<6){toast('6 caractères minimum.');return}try{await SB.req('/auth/v1/user',{method:'PUT',body:{password:pw}});closeSheet();toast('Mot de passe changé.')}catch(err){toast(authErr(err))}return}
   if(k==='auth'){const mode=f.dataset.mode,em=$('#au-email').value.trim(),pw=$('#au-pw').value;UI.authErr='';
