@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Bidou</title>
 <meta name="description" content="Tes repas de la semaine, au temps que tu as envie de passer en cuisine.">
-<meta name="theme-color" content="#e3a93a" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1c150f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#8f5232" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#5e331d" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -19,27 +19,30 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
-/* Bidou · Curcuma. Écran unique façon appli : bandeau curcuma en haut, cartes blanches bordées, barre d'onglets en bas. */
+/* Bidou · Cannelle (curcuma en touche). Écran unique façon appli : bandeau curcuma en haut, cartes blanches bordées, barre d'onglets en bas. */
 :root{
-  --bg:#fbf2df; --surface:#ffffff; --surface-2:#f6e8cc; --ink:#22150f; --muted:#5a3a2a; --line:#ead7b4;
-  --accent:#e3a93a; --on-accent:#22150f; --band:#e3a93a; --on-band:#22150f; --band-soft:rgba(34,21,15,.1);
-  --ex-bg:#f6de9a; --ex-fg:#22150f; --no-bg:#e3a93a; --no-fg:#22150f; --lo-bg:#6b4a2b; --lo-fg:#fff1e2;
-  --danger:#a8321a; --ok:#3f6b33; --shadow:0 3px 10px rgba(90,60,10,.08); --scrim:rgba(34,21,15,.45);
+  --bg:#f6e8d8; --surface:#fffaf3; --surface-2:#f0dcc5; --ink:#2a160d; --muted:#6b4630; --line:#e6ccb0;
+  --accent:#8f5232; --on-accent:#fff1e2; --band:#8f5232; --on-band:#fff1e2; --band-soft:rgba(255,241,226,.16);
+  --spice:#efb64a; --on-spice:#2a160d; --band-glow:rgba(239,182,74,.32);
+  --ex-bg:#efb64a; --ex-fg:#2a160d; --no-bg:#8f5232; --no-fg:#fff1e2; --lo-bg:#4f6a33; --lo-fg:#fff1e2;
+  --danger:#a8321a; --ok:#4f6a33; --shadow:0 4px 14px rgba(110,55,20,.10); --scrim:rgba(42,22,13,.5);
   --f-display:"Fredoka","Avenir Next Rounded","Arial Rounded MT Bold",system-ui,sans-serif;
   --f-body:"Inter",-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#1c150f; --surface:#271e16; --surface-2:#33281d; --ink:#fbf0e0; --muted:#cdb89f; --line:#43352a;
-  --accent:#ebb54b; --on-accent:#1c150f; --band:#2c2218; --on-band:#fbf0e0; --band-soft:rgba(251,240,224,.08);
-  --ex-bg:#4d3b12; --ex-fg:#f8dc8f; --no-bg:#ebb54b; --no-fg:#1c150f; --lo-bg:#7a5a3a; --lo-fg:#fff1e2;
-  --danger:#f08a6a; --ok:#8fc27f; --shadow:none; --scrim:rgba(0,0,0,.6); color-scheme:dark;
+  --bg:#1b110b; --surface:#27180f; --surface-2:#352116; --ink:#fbefe3; --muted:#d4b59c; --line:#4a2f1f;
+  --accent:#d4885a; --on-accent:#1b110b; --band:#5e331d; --on-band:#fbefe3; --band-soft:rgba(251,239,227,.12);
+  --spice:#efb64a; --on-spice:#1b110b; --band-glow:rgba(239,182,74,.18);
+  --ex-bg:#5a4012; --ex-fg:#f8d98f; --no-bg:#d4885a; --no-fg:#1b110b; --lo-bg:#4f6a33; --lo-fg:#eef5e3;
+  --danger:#f08a6a; --ok:#9cc27f; --shadow:none; --scrim:rgba(0,0,0,.6); color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --bg:#1c150f; --surface:#271e16; --surface-2:#33281d; --ink:#fbf0e0; --muted:#cdb89f; --line:#43352a;
-  --accent:#ebb54b; --on-accent:#1c150f; --band:#2c2218; --on-band:#fbf0e0; --band-soft:rgba(251,240,224,.08);
-  --ex-bg:#4d3b12; --ex-fg:#f8dc8f; --no-bg:#ebb54b; --no-fg:#1c150f; --lo-bg:#7a5a3a; --lo-fg:#fff1e2;
-  --danger:#f08a6a; --ok:#8fc27f; --shadow:none; --scrim:rgba(0,0,0,.6); color-scheme:dark;
+  --bg:#1b110b; --surface:#27180f; --surface-2:#352116; --ink:#fbefe3; --muted:#d4b59c; --line:#4a2f1f;
+  --accent:#d4885a; --on-accent:#1b110b; --band:#5e331d; --on-band:#fbefe3; --band-soft:rgba(251,239,227,.12);
+  --spice:#efb64a; --on-spice:#1b110b; --band-glow:rgba(239,182,74,.18);
+  --ex-bg:#5a4012; --ex-fg:#f8d98f; --no-bg:#d4885a; --no-fg:#1b110b; --lo-bg:#4f6a33; --lo-fg:#eef5e3;
+  --danger:#f08a6a; --ok:#9cc27f; --shadow:none; --scrim:rgba(0,0,0,.6); color-scheme:dark;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink)}
@@ -178,9 +181,9 @@ label.lbl,.lbl{display:block;font-size:12px;font-weight:700;letter-spacing:.06em
 .welcome h1{font-size:58px}
 .welcome .tagline{font-size:18px;max-width:22ch;opacity:.9}
 .welcome .note{font-size:12px;text-align:center;opacity:.85}
-.welcome .btn.primary{background:#22150f;color:#fff1e2}
-:root[data-theme="dark"] .welcome .btn.primary{background:var(--accent);color:var(--on-accent)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .welcome .btn.primary{background:var(--accent);color:var(--on-accent)}}
+.welcome .btn.primary{background:var(--spice);color:var(--on-spice)}
+:root[data-theme="dark"] .welcome .btn.primary{background:var(--spice);color:var(--on-spice)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .welcome .btn.primary{background:var(--spice);color:var(--on-spice)}}
 .ob-top{display:flex;align-items:center;gap:12px}
 .ob-bar{flex:1;display:grid;gap:4px}
 .ob-bar span{height:5px;border-radius:999px;background:var(--line)}
@@ -470,6 +473,42 @@ button,a,label,input,select,textarea{touch-action:manipulation}
 .mtile.wide{flex-direction:row;align-items:center;gap:12px;min-height:0;width:100%}
 .mtile.wide .memo{margin:0}
 .mtile.wide b{flex:1}
+
+/* ===== v6 : Cannelle, onglet Recettes, emoji de plat ===== */
+.band,.welcome{background:radial-gradient(120% 90% at 100% 0%,var(--band-glow),transparent 60%),radial-gradient(80% 60% at 0% 100%,rgba(0,0,0,.12),transparent 70%),var(--band)}
+.btn.spice{background:var(--spice);color:var(--on-spice)}
+.btn.spice:disabled{opacity:.6}
+.band .pill{background:var(--band-soft)}
+.band input[type=search]{width:100%;background:#fff8ec;color:#2a160d;border:0;border-radius:14px;padding:12px 14px;font-size:16px}
+:root[data-theme="dark"] .band input[type=search]{background:var(--surface-2);color:var(--ink)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .band input[type=search]{background:var(--surface-2);color:var(--ink)}}
+.welcome .tagline,.welcome h1{color:var(--on-band)}
+.tabbar a[aria-current="page"]{color:var(--accent)}
+.meal{border-left:5px solid var(--line)}
+.meal:has(.timechip[data-tone="express"]){border-left-color:var(--ex-bg)}
+.meal:has(.timechip[data-tone="normal"]){border-left-color:var(--no-bg)}
+.meal:has(.timechip[data-tone="long"]){border-left-color:var(--lo-bg)}
+.dish{flex:none;width:48px;height:48px;border-radius:16px;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;font-size:27px;line-height:1}
+.dish.big{width:62px;height:62px;border-radius:20px;font-size:36px;background:#fff1e2}
+.meal-open.has-dish{flex-direction:row;align-items:center;gap:12px}
+.mo-txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.r-title{display:flex;align-items:center;gap:14px}
+.filters{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.filters::-webkit-scrollbar{display:none}
+.chip.f{flex:none;white-space:nowrap}
+.cchip{flex:none;position:relative;width:96px;height:64px;border-radius:14px;overflow:hidden;border:0;padding:0;background:#3a2a1c;isolation:isolate;display:flex;align-items:flex-end}
+.cchip img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+.cchip::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,transparent 30%,rgba(20,10,4,.8))}
+.cchip span{color:#fff;font-size:12px;font-weight:800;padding:5px 7px;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.cchip[aria-pressed="true"]{box-shadow:inset 0 0 0 3px var(--spice)}
+.rcount{font-size:13px;margin:2px 4px -4px}
+.rlist{padding:4px 0}
+.rrow{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;padding:10px 14px;text-align:left;color:var(--ink);border-bottom:1px solid var(--line)}
+.rrow:last-child{border-bottom:0}
+.rr-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rr-txt b{font-size:15px;line-height:1.25}
+.rr-txt span{font-size:12px;color:var(--muted)}
+.rrow .tag{flex:none}
 </style>
 </head>
 <body>
