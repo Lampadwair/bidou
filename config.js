@@ -3,6 +3,6 @@
 // Supabase → Project Settings → API Keys (et Data API pour l'URL). Ces deux valeurs sont faites pour être publiques.
 // Laisse vide pour utiliser Bidou sans compte (données sur l'appareil, recettes de la bibliothèque).
 window.BIDOU_CONFIG = {
-  supabaseUrl: '',   // ex. https://abcdefghijkl.supabase.co
-  supabaseKey: ''    // ex. sb_publishable_xxxxxxxxxxxxxxxx
+  supabaseUrl: 'https://oofcnoykwzhvifqxzkcg.supabase.co',   // ex. https://abcdefghijkl.supabase.co
+  supabaseKey: 'sb_publishable_i7ElcFG_m0V5lGnk6_tijw_2IaBWLjn'    // ex. sb_publishable_xxxxxxxxxxxxxxxx
 };

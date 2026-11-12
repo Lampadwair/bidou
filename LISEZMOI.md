@@ -11,7 +11,7 @@ Pour avoir **un compte avec sauvegarde** et **des recettes inventées par Claude
 3. Ouvre **Authentication → URL Configuration** :
    - **Site URL** : `https://lampadwair.github.io/bidou/`
    - **Redirect URLs** : ajoute aussi `https://lampadwair.github.io/bidou/`
-4. Dans **Authentication → Sign In / Providers → Email**, tu peux décocher **Confirm email** si tu veux que la création de compte soit immédiate (sinon chacun reçoit un e-mail de confirmation).
+4. Dans **Authentication → Sign In / Providers → Email**, laisse **Confirm email** coché : chacun confirme son adresse par e-mail. C'est ce qui empêche quelqu'un de créer un compte avec l'adresse d'un autre.
 5. Ouvre **Project Settings → API Keys** et copie la clé **Publishable** (`sb_publishable_…`). Copie aussi l'**URL du projet** (`https://xxxx.supabase.co`, visible dans **Project Settings → Data API** ou sur l'accueil du projet).
 6. Colle ces deux valeurs dans `config.js`. Elles sont faites pour être publiques : la sécurité vient des règles créées à l'étape 2.
 
@@ -22,7 +22,7 @@ Pour avoir **un compte avec sauvegarde** et **des recettes inventées par Claude
 3. Dans les réglages de la fonction (**Details**), désactive **Verify JWT with legacy secret** : la fonction vérifie elle-même que la personne est connectée.
 4. Ouvre **Edge Functions → Secrets** et ajoute :
    - `ANTHROPIC_API_KEY` : ta clé `sk-ant-…`
-   - `ALLOWED_EMAILS` : ton e-mail, puis ceux de tes amis, séparés par des virgules. Seuls ces comptes peuvent faire travailler Claude (et donc dépenser ton crédit).
+   - `ALLOWED_EMAILS` (obligatoire) : ton e-mail, puis ceux de tes amis, séparés par des virgules. Seuls ces comptes, une fois leur e-mail confirmé, peuvent faire travailler Claude (et donc dépenser ton crédit). Si ce secret est vide, personne ne peut.
    - `DAILY_LIMIT` (facultatif) : nombre d'appels par personne et par jour, 30 par défaut.
    - `BIDOU_MODEL` (facultatif) : `claude-sonnet-5-5` par défaut.
 
@@ -58,6 +58,15 @@ Bidou s'ouvre alors en plein écran, comme une appli, et marche aussi hors ligne
 1. Ajoute leur e-mail dans le secret `ALLOWED_EMAILS` (Supabase → Edge Functions → Secrets).
 2. Envoie-leur l'adresse de l'appli : ils créent leur compte au premier lancement. Chacun a ses propres goûts, semaines et recettes.
 
+## Sécurité
+
+- **Ce qui est public, et c'est normal** : le code de l'appli, l'adresse du projet Supabase et la clé « publishable » de `config.js`. Toute appli web envoie son code au navigateur, donc un dépôt privé ne le cacherait pas vraiment.
+- **Ce qui protège tes données** : les règles de la base (`schema.sql`). Chaque personne ne peut lire et modifier que sa propre ligne, et ses données sont limitées à 2 Mo.
+- **Ce qui ne doit jamais être publié** : le mot de passe de la base, la clé « secret » / « service_role » de Supabase et ta clé Claude `sk-ant-…`. Aucune n'est dans ce dossier.
+- **Ta clé Claude** reste dans les secrets Supabase. Seuls les e-mails de `ALLOWED_EMAILS`, confirmés, peuvent s'en servir, avec une limite par jour. Fixe aussi une limite de dépense mensuelle dans la console Anthropic.
+- **Active la double authentification (2FA)** sur GitHub et sur Supabase : si quelqu'un prenait ton compte GitHub, il pourrait modifier l'appli.
+- **Option** : quand tes amis ont créé leur compte, tu peux fermer les inscriptions dans **Authentication → Sign In / Providers → Allow new users to sign up**.
+
 ## Mettre à jour
 
-Quand tu modifies l'appli, change le numéro de version aux trois endroits (`APP_VER` dans `app.js`, `VERSION` dans `sw.js`, et `version.json`), puis fais un push. Les téléphones récupèrent la nouvelle version à la prochaine ouverture avec du réseau.
+Double-clique sur `publier.bat` pour envoyer les modifications sur GitHub. Quand tu modifies l'appli, change aussi le numéro de version aux trois endroits (`APP_VER` dans `app.js`, `VERSION` dans `sw.js`, et `version.json`), puis fais un push. Les téléphones récupèrent la nouvelle version à la prochaine ouverture avec du réseau.
