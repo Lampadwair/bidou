@@ -1176,6 +1176,26 @@ main{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
 @supports not (backdrop-filter:blur(1px)) and not (-webkit-backdrop-filter:blur(1px)){.tabbar .wrap{background:rgba(255,241,224,.97)}:root[data-theme="dark"] .tabbar .wrap{background:rgba(39,23,14,.97)}}
 @media (prefers-reduced-transparency: reduce){.tabbar .wrap{background:var(--surface)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* v13 : recettes sans photos, phrase de recherche */
+.rgrid.rows{grid-template-columns:1fr;gap:8px}
+@media (min-width:640px){.rgrid.rows{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rr{position:relative;min-width:0}
+.rr-open{width:100%;display:flex;align-items:center;gap:12px;padding:10px 54px 10px 10px;border:0;border-radius:20px;background:var(--surface);box-shadow:var(--shadow);color:var(--ink);text-align:left;font:inherit;transition:transform .16s ease}
+.rr-open:active{transform:scale(.98)}
+.rr-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rr-t b{font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rr-m{font-size:12.5px;color:var(--muted)}
+.rr-fav{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:0;background:none;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.rr-fav.on{color:#c0391b}.rr-fav.on svg{fill:currentColor}
+.dt{flex:none;display:flex;align-items:center;justify-content:center;background:var(--c-bg);color:var(--c-fg)}
+.dt.s{width:52px;height:52px;border-radius:16px}
+.rc-ph.dt{height:112px;background:var(--c-bg)}
+.rh-ph.dt{display:flex;background:var(--c-bg);padding-right:40px;box-sizing:border-box}
+:root[data-theme="dark"] .dt{background:#3A2216;background:color-mix(in srgb,var(--c-bg) 22%,#21130B);color:var(--c-bg)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .dt{background:#3A2216;background:color-mix(in srgb,var(--c-bg) 22%,#21130B);color:var(--c-bg)}}
+.rphrase{margin:0;font-size:17px;line-height:1.95;color:var(--ink)}
+.fopts.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+.panel .btn[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);border-color:transparent}
 </style>
 </head>
 <body>
