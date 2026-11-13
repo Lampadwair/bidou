@@ -7,6 +7,8 @@
 //   ALLOWED_EMAILS     (obligatoire) e-mails autorisés, séparés par des virgules. Vide = personne (sécurité).
 //   DAILY_LIMIT        (facultatif)  nombre d'appels par personne et par jour, 30 par défaut.
 //   BIDOU_MODEL        (facultatif)  modèle Claude, claude-sonnet-5-5 par défaut.
+//   ALLOWED_ORIGINS    (facultatif)  sites autorisés à appeler la fonction, séparés par des virgules.
+//                                    Par défaut : https://lampadwair.github.io (+ localhost pour tester).
 //
 // Elle sait aussi lire une recette depuis un lien (action "url") : elle télécharge la page,
 // cherche la recette au format standard schema.org (Marmiton, 750g, la plupart des blogs) et la renvoie.
@@ -24,15 +26,28 @@ const SYSTEM =
   "Tu écris des recettes équilibrées, réalistes et gourmandes, en français. " +
   "Tu réponds uniquement avec le JSON demandé, sans texte avant ni après, sans bloc de code.";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
+// Seul le site de Bidou peut appeler la fonction depuis un navigateur (les autres sites sont refusés).
+const ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "https://lampadwair.github.io")
+  .split(",").map((s) => s.trim().replace(/\/+$/, "").toLowerCase()).filter(Boolean);
+const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const originOk = (o: string) => ORIGINS.includes(o.toLowerCase()) || LOCAL.test(o);
+const CORS: Record<string, string> = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Vary": "Origin",
 };
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("Origin") || "";
+  if (origin && !originOk(origin)) return json(403, { error: "origin_not_allowed" });
+  const res = await handle(req);
+  if (origin) res.headers.set("Access-Control-Allow-Origin", origin);
+  return res;
+});
+
+async function handle(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
 
@@ -126,7 +141,7 @@ Deno.serve(async (req) => {
   return new Response(stream, {
     headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
   });
-});
+}
 
 // ---------------------------------------------------------------------------------------------
 // Import d'une recette depuis un lien.
