@@ -1,7 +1,7 @@
 // Bidou : le code de l'appli.
 'use strict';
 /* =================== Constantes =================== */
-const APP_VER='bidou-v13';
+const APP_VER='bidou-v14';
 const DAYS=[['lun','Lundi'],['mar','Mardi'],['mer','Mercredi'],['jeu','Jeudi'],['ven','Vendredi'],['sam','Samedi'],['dim','Dimanche']];
 const SLOTS=[['pdj','Petit-déj'],['midi','Déjeuner'],['gouter','Goûter'],['soir','Dîner']];
 const SI=b=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${b}</svg>`;
@@ -318,6 +318,15 @@ function mins(m){m=Math.round(m||0);if(m<60)return m+' min';const h=Math.floor(m
 function frac(x){const w=Math.floor(x+1e-9),f=Math.round((x-w)*4)/4;const F={0.25:'¼',0.5:'½',0.75:'¾'};if(f===0)return String(w);if(f===1)return String(w+1);return (w?w+' ':'')+F[f]}
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{if(v===''||v==null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){}}};
 const W2='w2:',weekOf=k=>k.startsWith(W2)?2:1,baseDay=d=>String(d).replace(W2,'');
+/* semaine glissante : elle part du jour où on l'a lancée (D.week.start, AAAA-MM-JJ) */
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const todayYmd=()=>ymd(new Date());
+function weekStart(){const w=D.week||{},s=w.start||(w.createdAt?ymd(new Date(w.createdAt)):todayYmd()),[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+const startIdx=()=>memo('si',()=>(weekStart().getDay()+6)%7);
+const rdays=()=>{const i=startIdx();return DAYS.slice(i).concat(DAYS.slice(0,i))};
+const dayPos=d=>(DAYS.findIndex(x=>x[0]===baseDay(d))-startIdx()+7)%7;
+function weekOver(){const e=weekStart();e.setDate(e.getDate()+7*(D.profile.weeks===2?2:1));return new Date()>=e}
+function restartWeek(){D.week.start=todayYmd();for(const k in D.week.slots){const s=D.week.slots[k];if(s.autoLeft){s.left=null;s.autoLeft=false;if(!s.pinned)s.recipe=null}}memoReset()}
 function dayLabel(k){const[d,s]=k.split('-');return (DAYS.find(x=>x[0]===baseDay(d))||[,''])[1]+(weekOf(k)===2?' (sem. 2)':'')+' · '+String((SLOTS.find(x=>x[0]===s)||[,''])[1]).toLowerCase()}
 const month=()=>new Date().getMonth()+1;
 const inSeason=r=>!!r&&(r.season===true||(r.months||[]).includes(month()));
@@ -339,6 +348,7 @@ function norm(d){
   p.gear=(p.gear||[]).filter(g=>GEAR.includes(g));p.allergens=Array.isArray(p.allergens)?p.allergens:[];
   p.cuisines=[...new Set((p.cuisines||[]).flatMap(c=>OLD_CUISINES[c]||[c]).filter(c=>c==='tout'||CUISINE_LABEL[c]))];
   const w=d.week&&d.week.slots?d.week:weekFromPlan(p.plan);
+  if(w.start&&!/^\d{4}-\d{2}-\d{2}$/.test(String(w.start)))w.start=null;
   const base=weekFromPlan(p.plan).slots;for(const k in base){w.slots[k]=Object.assign(base[k],w.slots[k]||{})}for(const k in w.slots){if(!base[k])delete w.slots[k]}
   for(const k in w.slots){const x=w.slots[k];if(!MODE_KEYS.includes(x.mode))x.mode='off';if(x.left&&!w.slots[x.left])x.left=null;if(x.recipe&&(typeof x.recipe!=='object'||!Array.isArray(x.recipe.ing)))x.recipe=null;if(x.recipe&&!MODES[x.recipe.mode])x.recipe.mode='normal';x.portions=x.portions?Math.max(1,Math.min(12,+x.portions||1)):null}
   if(!['auto','light','dark'].includes(p.theme))p.theme='auto';p.household=Math.max(1,Math.min(12,+p.household||1));
@@ -795,7 +805,7 @@ function progressHTML(){const g=UI.gen;if(!g)return'';const pct=g.n?Math.min(100
 function updateProgress(n){if(!UI.gen||n===UI.gen.n)return;UI.gen.n=n;const el=document.getElementById('gen-progress');if(el)el.outerHTML=progressHTML()}
 const AUDACE_SHORT={classique:'Classique',audace:'Audacieux',surprise:'Surprenant'};
 const mealCount=()=>activeSlots().length;
-function weekDates(wk){const n=new Date(),m=new Date(n.getFullYear(),n.getMonth(),n.getDate()-((n.getDay()+6)%7)+(wk-1)*7);return DAYS.map((_,i)=>new Date(m.getFullYear(),m.getMonth(),m.getDate()+i))}
+function weekDates(wk){const m=weekStart();return DAYS.map((_,i)=>new Date(m.getFullYear(),m.getMonth(),m.getDate()+(wk-1)*7+i))}
 const DMY=new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short'});
 function wmRow(k){const s=D.week.slots[k],slot=k.split('-')[1],sl=(SLOTS.find(x=>x[0]===slot)||[])[1];
   if(UI.busy[k])return`<article class="wm busy"><span class="wm-ph"></span><span class="wm-t"><span class="wm-s">${sl}</span><span class="wm-m">Bidou cherche une idée…</span></span></article>`;
@@ -811,7 +821,7 @@ function vWeek(){const w=D.week,p=D.profile,act=activeSlots(),filled=act.filter(
   const complete=act.length&&!missing,cta=!filled.length?`Générer mes ${act.length} repas`:`Compléter les ${missing} repas`;
   const dates=weekDates(wk),today=new Date(),x=filled.length?weekStats():null;
   const range=dates[0].getDate()+' – '+DMY.format(dates[6]);
-  const days=DAYS.map(([d,l],i)=>{const ks=SLOTS.map(([s])=>pre+d+'-'+s).filter(k=>w.slots[k]&&w.slots[k].mode!=='off'),dt=dates[i],td=dt.toDateString()===today.toDateString(),st=dayStats(pre,d);
+  const days=rdays().map(([d,l],i)=>{const ks=SLOTS.map(([s])=>pre+d+'-'+s).filter(k=>w.slots[k]&&w.slots[k].mode!=='off'),dt=dates[i],td=dt.toDateString()===today.toDateString(),st=dayStats(pre,d);
     return`<section class="wday"><div class="wbadge ${td?'today':''}"><b class="num">${dt.getDate()}</b><span>${l.slice(0,3)}</span></div><div class="wdmeals">${ks.length?ks.map(k=>`<div class="mswipe"><span class="mswipe-bg" aria-hidden="true">${ic('swap',20)}<b>Remplacer</b></span>${wmRow(k)}</div>`).join(''):`<button class="wm empty add" data-act="timeSheet" data-slot="${pre+d}-soir"><span class="wm-t"><span class="wm-s">Rien de prévu</span><span class="wm-m">Ajouter un repas</span></span>${ic('plus',18)}</button>`}${st.n?`<span class="wdstat num">${nf0.format(st.kcal)} kcal · ${nf0.format(st.prot)} g prot. · ${eur(st.cost)}</span>`:''}</div></section>`}).join('');
   return band(`<div class="between"><h1>${two?'Tes 2':'Ta'} <span class="serif">${two?'semaines':'semaine'}</span></h1>${two?`<div class="seg wkseg" role="tablist" aria-label="Semaine affichée">${[1,2].map(v=>`<button role="tab" data-act="wk" data-val="${v}" aria-selected="${wk===v}" aria-pressed="${wk===v}">Sem. ${v}</button>`).join('')}</div>`:`<span class="pill num">${range}</span>`}</div>`,'compact')+
   `<main class="gutter"><div class="wrap stack wkv">
@@ -850,7 +860,7 @@ function vShop(){const two=D.profile.weeks===2,p=D.profile,{items,cost}=shopping
     ${hide?'':done.map(([r,l])=>`<details class="card aisle done" data-det="${esc('d-'+r)}" ${UI.det['d-'+r]?'open':''}><summary><h3><span>${ic('check',16)} ${esc(r)}</span><span class="muted num">${l.length}</span></h3></summary><ul>${l.map(itemRow).join('')}</ul></details>`).join('')}
   </div></main>`}
 /* ---- idées ---- */
-function slotOptions(){const wks=D.profile.weeks===2?[['',' (sem. 1)'],[W2,' (sem. 2)']]:[['','']];return`<option value="">Ajouter à…</option>`+wks.map(([pre,suf])=>DAYS.map(([d,l])=>`<optgroup label="${l}${suf}">${SLOTS.map(([s,sl])=>{const k=pre+d+'-'+s,x=D.week.slots[k];return x?`<option value="${k}">${l}${suf} · ${sl.toLowerCase()}${x.recipe&&x.mode!=='off'?' (remplace)':''}</option>`:''}).join('')}</optgroup>`).join('')).join('')}
+function slotOptions(){const wks=D.profile.weeks===2?[['',' (sem. 1)'],[W2,' (sem. 2)']]:[['','']];return`<option value="">Ajouter à…</option>`+wks.map(([pre,suf])=>rdays().map(([d,l])=>`<optgroup label="${l}${suf}">${SLOTS.map(([s,sl])=>{const k=pre+d+'-'+s,x=D.week.slots[k];return x?`<option value="${k}">${l}${suf} · ${sl.toLowerCase()}${x.recipe&&x.mode!=='off'?' (remplace)':''}</option>`:''}).join('')}</optgroup>`).join('')).join('')}
 function rcard(r,type,i){return`<article class="card rcard"><button class="meal-open has-dish" data-act="openList" data-type="${type}" data-i="${i}"><span class="dish ph" aria-hidden="true">${pimg(photoOf(r,330))}</span><span class="mo-txt"><span class="meal-name">${esc(r.name)}</span><span class="meal-meta num">${esc(meta(r))}</span></span></button>
   <div class="meal-foot"><span class="tags"><span class="tag ${esc(r.mode)}">${esc(MODES[r.mode]?.short||'')}</span>${tagsFor(r)}</span>
   <span class="meal-acts"><button class="icon-btn fav ${isFav(r)?'on':''}" data-act="favList" data-type="${type}" data-i="${i}" aria-label="Favori">${I.heart}</button></span></div>
@@ -1143,7 +1153,7 @@ const NO_REHEAT=/salade|tartare|carpaccio|poke|ceviche|croque|burger|sandwich|wr
 const coreKey=n=>itoks(n).join(' ');
 
 /* ---- restes : cuisiner double ---- */
-const DAYN=k=>(weekOf(k)-1)*7+DAYS.findIndex(x=>x[0]===baseDay(k.split('-')[0]));
+const DAYN=k=>(weekOf(k)-1)*7+dayPos(k.split('-')[0]);
 const ORD=k=>DAYN(k)*10+SLOTS.findIndex(x=>x[0]===k.split('-')[1]);
 const leftsOf=k=>Object.keys(D.week.slots).filter(x=>D.week.slots[x].left===k&&D.week.slots[x].mode!=='off');
 function porTotal(k){return portionsOf(k)+sum(leftsOf(k).map(portionsOf))}
@@ -1348,7 +1358,7 @@ const toBuy=i=>!i.staple&&!i.home;
   document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end)})();
 
 /* =================== Actions =================== */
-async function generateWeek(){autoLeft();syncLeft();const keys=activeSlots().filter(k=>!D.week.slots[k].pinned&&!D.week.slots[k].left);if(!keys.length){toast('Choisis au moins un repas à générer.');return}
+async function generateWeek(){if(weekOver()||!Object.values(D.week.slots).some(s=>s.recipe))restartWeek();autoLeft();syncLeft();const keys=activeSlots().filter(k=>!D.week.slots[k].pinned&&!D.week.slots[k].left);if(!keys.length){toast('Choisis au moins un repas à générer.');return}
   const ctl=new AbortController();UI.gen={kind:'week',n:0,total:keys.length,ctl};render();
   const batches=[];for(let i=0;i<keys.length;i+=14)batches.push(keys.slice(i,i+14));let ok=0,done=0;
   try{for(const b of batches){
@@ -1391,7 +1401,7 @@ function toggleFav(r){if(!r)return;const i=D.favs.findIndex(f=>f.name===r.name);
   if(i>=0){D.favs.splice(i,1);toast('Retiré des favoris.')}else{if(D.favs.length>=200){toast('200 favoris maximum.');return}D.favs.unshift(clone(r));toast('Ajouté aux favoris.')}save();render()}
 function addToSlot(r,k){if(!r||!k)return;const s=D.week.slots[k];s.recipe=clone(r);if(s.mode==='off'||r.total>MODES[s.mode].max)s.mode=r.mode;save();toast('Ajouté : '+dayLabel(k)+'.');render()}
 function listItem(type,i){return type==='lib'?LIB[i]:type==='idea'?UI.ideas[i]:type==='mine'?D.mine[i]:D.favs[i]}
-function newWeek(){const old=D.week;UI.wk=1;D.profile.plan=computePlan(D.profile);D.week=weekFromPlan(D.profile.plan);for(const k in D.week.slots){if(old.slots[k]&&old.slots[k].pinned&&old.slots[k].recipe&&D.week.slots[k].mode!=='off'){D.week.slots[k].recipe=old.slots[k].recipe;D.week.slots[k].pinned=true}}D.week.audace=old.audace;D.week.envies=old.envies||'';D.shop.checked={};save();render();toast('Planning remis à zéro.')}
+function newWeek(){const old=D.week;UI.wk=1;D.profile.plan=computePlan(D.profile);D.week=weekFromPlan(D.profile.plan);for(const k in D.week.slots){if(old.slots[k]&&old.slots[k].pinned&&old.slots[k].recipe&&D.week.slots[k].mode!=='off'){D.week.slots[k].recipe=old.slots[k].recipe;D.week.slots[k].pinned=true}}D.week.audace=old.audace;D.week.envies=old.envies||'';D.week.start=todayYmd();memoReset();D.shop.checked={};save();render();toast('Planning remis à zéro.')}
 
 const A={
   start(){UI.screen='onboard';UI.ob=0;UI.obDir=1;UI.enter=true;render();scrollTo(0,0)},
