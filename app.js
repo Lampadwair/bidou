@@ -1,7 +1,7 @@
 // Bidou : le code de l'appli.
 'use strict';
 /* =================== Constantes =================== */
-const APP_VER='bidou-v10';
+const APP_VER='bidou-v10.2';
 const DAYS=[['lun','Lundi'],['mar','Mardi'],['mer','Mercredi'],['jeu','Jeudi'],['ven','Vendredi'],['sam','Samedi'],['dim','Dimanche']];
 const SLOTS=[['pdj','Petit-déj'],['midi','Déjeuner'],['gouter','Goûter'],['soir','Dîner']];
 const SI=b=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${b}</svg>`;
@@ -343,7 +343,7 @@ function applyTheme(){const t=D.profile.theme;if(t==='light'||t==='dark')documen
 
 /* =================== Compte et synchro (Supabase) =================== */
 const CFG=window.BIDOU_CONFIG||{};
-const SUPA={url:String(CFG.supabaseUrl||'').replace(/\/$/,''),key:String(CFG.supabaseKey||'')};
+const SUPA={url:String(CFG.supabaseUrl||'').replace(/\/$/,''),key:String(CFG.supabaseKey||''),fn:/^[a-z0-9_-]+$/i.test(CFG.chefFunction||'')?CFG.chefFunction:'bidou-chef'};
 const SB={
   on(){return !!SUPA.url&&!!SUPA.key},
   sess(){try{return JSON.parse(LS.get('bidou_auth')||'null')}catch(e){return null}},
@@ -407,9 +407,9 @@ function handleAuthHash(){const h=location.hash;if(!/access_token=/.test(h))retu
 async function askChef(prompt,o={}){
   if(!SB.on())throw{code:'no_config'};
   const t=await SB.token();if(!t)throw{code:'no_session'};
-  let r;try{r=await fetch(SUPA.url+'/functions/v1/bidou-chef',{method:'POST',headers:{apikey:SUPA.key,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({prompt,max_tokens:o.max||8000}),signal:o.signal})}
+  let r;try{r=await fetch(SUPA.url+'/functions/v1/'+SUPA.fn,{method:'POST',headers:{apikey:SUPA.key,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({prompt,max_tokens:o.max||8000}),signal:o.signal})}
   catch(e){if(e&&e.name==='AbortError')throw{code:'cancelled'};throw{code:'offline'}}
-  if(!r.ok){let j=null;try{j=await r.json()}catch(e){}throw{code:r.status,msg:j&&j.error||''}}
+  if(!r.ok){let j=null;try{j=await r.json()}catch(e){}const m=j&&(j.error||j.code)||'';throw{code:r.status===404?'no_function':m==='missing_anthropic_key'?'no_key':r.status,msg:m}}
   const rd=r.body.getReader(),dec=new TextDecoder();let text='';
   try{for(;;){const{done,value}=await rd.read();if(done)break;text+=dec.decode(value,{stream:true});o.onText&&o.onText(text)}}
   catch(e){if(e&&e.name==='AbortError')throw{code:'cancelled'};throw{code:'offline'}}
@@ -427,11 +427,12 @@ function chefErr(e){const c=e&&e.code;
   if(c==='no_session')return'Recettes de la bibliothèque. Connecte-toi pour du sur-mesure.';
   if(c===403)return'Ton compte n’a pas accès à la génération par Claude. Demande à Simon de t’ajouter.';
   if(c===429)return'Limite du jour atteinte. Réessaie demain.';
-  if(c===404)return'La fonction bidou-chef n’est pas encore installée sur Supabase.';
+  if(c===404||c==='no_function')return'Recettes de la bibliothèque : la fonction Claude (bidou-chef) n’est pas encore installée sur Supabase.';
+  if(c==='no_key')return'Recettes de la bibliothèque : il manque la clé Claude dans les secrets Supabase.';
   if(c==='offline')return'Pas de connexion internet.';
   if(c==='invalid_json')return'La réponse était illisible. Réessaie.';
   return'Petit souci avec Claude. Réessaie dans un moment.'}
-const FALLBACK=['no_config','no_session',403];
+const FALLBACK=['no_config','no_session',403,'no_function','no_key'];
 
 /* =================== Prompts =================== */
 function profileText(seasonOn){const p=D.profile;const lvl=(LEVELS.find(l=>l[0]===p.level)||LEVELS[1])[1];
@@ -1227,7 +1228,7 @@ function updTimers(){for(const t of TIMERS){const el=document.querySelector(`[da
 
 /* ---- import depuis un lien ---- */
 async function chefJSON(body){if(!SB.on())throw{code:'no_config'};const t=await SB.token();if(!t)throw{code:'no_session'};
-  let r;try{r=await fetch(SUPA.url+'/functions/v1/bidou-chef',{method:'POST',headers:{apikey:SUPA.key,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify(body)})}catch(e){throw{code:'offline'}}
+  let r;try{r=await fetch(SUPA.url+'/functions/v1/'+SUPA.fn,{method:'POST',headers:{apikey:SUPA.key,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify(body)})}catch(e){throw{code:'offline'}}
   let j=null;try{j=await r.json()}catch(e){}if(!r.ok)throw{code:r.status,msg:j&&j.error||''};return j}
 const isoMin=s=>{const m=String(s||'').match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/i);return m?(+m[1]||0)*1440+(+m[2]||0)*60+(+m[3]||0):0};
 function decHTML(s){const t=document.createElement('textarea');t.innerHTML=String(s||'').replace(/<[^>]*>/g,' ');return t.value.replace(/\s+/g,' ').trim()}
