@@ -1,7 +1,7 @@
 // Bidou : le code de l'appli.
 'use strict';
 /* =================== Constantes =================== */
-const APP_VER='bidou-v10.2';
+const APP_VER='bidou-v10.3';
 const DAYS=[['lun','Lundi'],['mar','Mardi'],['mer','Mercredi'],['jeu','Jeudi'],['ven','Vendredi'],['sam','Samedi'],['dim','Dimanche']];
 const SLOTS=[['pdj','Petit-déj'],['midi','Déjeuner'],['gouter','Goûter'],['soir','Dîner']];
 const SI=b=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${b}</svg>`;
@@ -344,6 +344,7 @@ function applyTheme(){const t=D.profile.theme;if(t==='light'||t==='dark')documen
 /* =================== Compte et synchro (Supabase) =================== */
 const CFG=window.BIDOU_CONFIG||{};
 const SUPA={url:String(CFG.supabaseUrl||'').replace(/\/$/,''),key:String(CFG.supabaseKey||''),fn:/^[a-z0-9_-]+$/i.test(CFG.chefFunction||'')?CFG.chefFunction:'bidou-chef'};
+const CLAUDE=CFG.claude!==false; // false : Bidou n'appelle jamais Claude (bibliothèque seulement)
 const SB={
   on(){return !!SUPA.url&&!!SUPA.key},
   sess(){try{return JSON.parse(LS.get('bidou_auth')||'null')}catch(e){return null}},
@@ -405,6 +406,7 @@ function handleAuthHash(){const h=location.hash;if(!/access_token=/.test(h))retu
 
 /* =================== Claude via la fonction Supabase =================== */
 async function askChef(prompt,o={}){
+  if(!CLAUDE)throw{code:'off'};
   if(!SB.on())throw{code:'no_config'};
   const t=await SB.token();if(!t)throw{code:'no_session'};
   let r;try{r=await fetch(SUPA.url+'/functions/v1/'+SUPA.fn,{method:'POST',headers:{apikey:SUPA.key,Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({prompt,max_tokens:o.max||8000}),signal:o.signal})}
@@ -423,6 +425,7 @@ function parseJSON(text){
   if(a<1e9&&b>a){try{return JSON.parse(t.slice(a,b+1))}catch(e){}}
   throw{code:'invalid_json'}}
 function chefErr(e){const c=e&&e.code;
+  if(c==='off')return'';
   if(c==='no_config')return'Recettes de la bibliothèque Bidou.';
   if(c==='no_session')return'Recettes de la bibliothèque. Connecte-toi pour du sur-mesure.';
   if(c===403)return'Ton compte n’a pas accès à la génération par Claude. Demande à Simon de t’ajouter.';
@@ -432,7 +435,7 @@ function chefErr(e){const c=e&&e.code;
   if(c==='offline')return'Pas de connexion internet.';
   if(c==='invalid_json')return'La réponse était illisible. Réessaie.';
   return'Petit souci avec Claude. Réessaie dans un moment.'}
-const FALLBACK=['no_config','no_session',403,'no_function','no_key'];
+const FALLBACK=['off','no_config','no_session',403,'no_function','no_key'];
 
 /* =================== Prompts =================== */
 function profileText(seasonOn){const p=D.profile;const lvl=(LEVELS.find(l=>l[0]===p.level)||LEVELS[1])[1];
@@ -601,7 +604,7 @@ function parseIngLine(line,portions){
 function modeFor(total){return total<=20?'express':total<=45?'normal':'long'}
 
 /* =================== Rendu =================== */
-const shownOnce=new Set();function toastOnce(m){if(shownOnce.has(m))return;shownOnce.add(m);toast(m)}
+const shownOnce=new Set();function toastOnce(m){if(!m||shownOnce.has(m))return;shownOnce.add(m);toast(m)}
 document.addEventListener('error',e=>{const t=e.target;if(t&&t.tagName==='IMG')t.classList.add('broken')},true);
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3600)}
 document.addEventListener('click',e=>{if(e.target.id==='toast')e.target.hidden=true});
@@ -991,7 +994,7 @@ function vEditor(s){const r=s.draft;const ingText=(r.ing||[]).map(i=>{const q=in
   <header class="band gutter"><div class="wrap"><div class="between"><button class="icon-btn" data-act="closeSheet" aria-label="Fermer" style="background:var(--band-soft);color:inherit">${I.close}</button>
     ${s.i!=null?`<button class="btn small ghost" data-act="deleteMine" data-i="${s.i}">${I.trash} Supprimer</button>`:''}</div>
     <h1>${s.i!=null?'Modifier ma recette':'Nouvelle recette'}</h1>
-    <div class="seg" role="group">${[['link','Lien'],['paste','Coller'],['form','Saisir']].map(([v,l])=>`<button data-act="edMode" data-val="${v}" aria-pressed="${s.mode===v}">${l}</button>`).join('')}</div></div></header>
+    <div class="seg" role="group">${[['link','Lien'],['paste','Coller'],['form','Saisir']].filter(x=>CLAUDE||x[0]!=='paste').map(([v,l])=>`<button data-act="edMode" data-val="${v}" aria-pressed="${s.mode===v}">${l}</button>`).join('')}</div></div></header>
   <main class="gutter"><div class="wrap stack">
   ${s.mode==='link'?`<div class="card stack"><p class="muted" style="font-size:14px">Colle l’adresse d’une recette (Marmiton, 750g, Cuisine AZ, un blog…). Bidou récupère les ingrédients et les étapes, tu relis avant d’enregistrer.</p>
       <input type="url" id="link-url" value="${esc(s.url||'')}" placeholder="https://…" inputmode="url" autocomplete="off" aria-label="Adresse de la recette">
@@ -1100,9 +1103,9 @@ function frCard(x){const r=x.r,n=x.have.length+x.miss.length,pc=Math.round(x.hav
     ${x.miss.length?`<div class="fr-miss"><span class="fr-ml">Manque</span>${x.miss.slice(0,3).map(i=>`<span class="mtag">${esc(i.n)}</span>`).join('')}${x.miss.length>3?`<span class="mtag more">+${x.miss.length-3}</span>`:''}<button class="fr-add" data-act="missToShop" data-type="${x.type}" data-i="${x.i}" aria-label="Ajouter ce qui manque aux courses">${ic('cart',16)}</button></div>`:`<div class="fr-miss ok">${ic('check',15)}<span>Tu as tout ce qu’il faut</span></div>`}</article>`}
 function frSection(title,list,key,lim){if(!list.length)return'';const sh=list.slice(0,lim);
   return`<section class="frsec"><h2 class="section-title">${title} <span class="num">· ${list.length}</span></h2><div class="frlist">${sh.map(frCard).join('')}</div>${list.length>sh.length?`<button class="btn block subtle" data-act="frMore" data-val="${key}">Voir ${Math.min(12,list.length-sh.length)} de plus</button>`:''}</section>`}
-function vFrigo(){const F=UI.fr,ft=UI.ftab,n=D.pantry.length;
+function vFrigo(){if(!CLAUDE)UI.ftab='frigo';const F=UI.fr,ft=UI.ftab,n=D.pantry.length;
   const head=band(`<div class="between"><h1>${ft==='frigo'?'Mon <span class="serif">frigo</span>':'Des <span class="serif">idées</span>'}</h1>${ft==='frigo'&&n?`<span class="pill num">${n} ingrédient${n>1?'s':''}</span>`:''}</div>
-    <div class="seg full onband" role="group" aria-label="Mode">${[['frigo','Ce que j’ai'],['idees','Idées du chef']].map(([v,l])=>`<button data-act="ftab" data-val="${v}" aria-pressed="${ft===v}">${l}</button>`).join('')}</div>`,'compact');
+    ${CLAUDE?`<div class="seg full onband" role="group" aria-label="Mode">${[['frigo','Ce que j’ai'],['idees','Idées du chef']].map(([v,l])=>`<button data-act="ftab" data-val="${v}" aria-pressed="${ft===v}">${l}</button>`).join('')}</div>`:''}`,'compact');
   if(ft==='idees')return head+ideasBody();
   const quick=FR_QUICK.filter(q=>!D.pantry.some(x=>fold(x.n)===fold(q))).slice(0,n?6:14);
   let out='';
@@ -1150,7 +1153,7 @@ function vSwap(s){const k=s.slot,pg=s.pg||0,list=s.list||[],page=list.slice(pg*3
   return`<div class="sheet-wrap modal" data-act="sheetBg"><div class="panel stack"><div class="between"><div><span class="kick">${esc(dayLabel(k))}</span><h2>Remplacer par…</h2></div><button class="icon-btn" data-act="closeSheet" aria-label="Fermer">${I.close}</button></div>
     ${page.length?`<div class="alts">${page.map((x,j)=>`<button class="alt" data-act="swapPick" data-j="${pg*3+j}"><span class="alt-ph">${pimg(photoOf(x.r,330),1)}</span><span class="alt-txt"><b>${esc(x.r.name)}</b><span class="muted num">${mins(x.r.total)}${x.r.kcal?' · '+nf0.format(x.r.kcal)+' kcal':''}${x.r.cost?' · '+eur(x.r.cost):''}</span>
       <span class="alt-why ${x.nw?'':'ok'}">${x.nw?`${ic('cart',13)}+${x.nw} à acheter`:`${ic('check',13)}Rien de plus à acheter`}${x.shared.length?` · réutilise ${esc(x.shared.slice(0,2).join(', '))}`:''}</span></span></button>`).join('')}</div>`:`<p class="muted">Plus d’autre proposition avec tes réglages.</p>`}
-    <div class="row nowrap">${list.length>3?`<button class="btn" style="flex:1" data-act="swapMore">${ic('refresh',18)} 3 autres</button>`:''}${signedIn()?`<button class="btn" style="flex:1" data-act="swapChef">${ic('sparkles',18)} Demander au chef</button>`:''}</div>
+    <div class="row nowrap">${list.length>3?`<button class="btn" style="flex:1" data-act="swapMore">${ic('refresh',18)} 3 autres</button>`:''}${signedIn()&&CLAUDE?`<button class="btn" style="flex:1" data-act="swapChef">${ic('sparkles',18)} Demander au chef</button>`:''}</div>
     <p class="muted small" style="text-align:center">Astuce : glisse un repas vers la gauche pour ouvrir ce menu.</p></div></div>`}
 
 /* ---- budget et nutrition ---- */
@@ -1244,9 +1247,9 @@ async function importLink(){const s=UI.sheet,url=(($('#link-url')||{}).value||''
   UI.gen={kind:'import',n:0,total:1};renderSheet();
   try{const j=await chefJSON({action:'url',url});
     if(j&&j.recipe){const x=fromSchema(Object.assign({url},j.recipe));if(!x.draft.ing.length)throw{code:'no_recipe'};s.draft=x.draft;s.portions=x.por;s.mode='form';toast('Recette récupérée : relis puis enregistre.')}
-    else if(j&&j.text){const text=await askChef(importPrompt(j.text),{max:4000});const r=cleanRecipe(parseJSON(text),'normal');if(!r)throw{code:'invalid_json'};r.src=url;s.draft=r;s.portions=1;s.mode='form';toast('Relis puis enregistre.')}
+    else if(j&&j.text){if(!CLAUDE)throw{code:'no_recipe'};const text=await askChef(importPrompt(j.text),{max:4000});const r=cleanRecipe(parseJSON(text),'normal');if(!r)throw{code:'invalid_json'};r.src=url;s.draft=r;s.portions=1;s.mode='form';toast('Relis puis enregistre.')}
     else throw{code:'no_recipe'}}
-  catch(e){const c=e&&e.code;toast(c==='no_recipe'||c===422?'Pas de recette trouvée sur cette page. Copie-colle plutôt le texte.':c===400?'Cette adresse n’est pas acceptée.':c===502||c===415?'Le site n’a pas répondu ou bloque la lecture. Copie-colle plutôt le texte.':c===404?'La fonction bidou-chef n’est pas encore installée sur Supabase.':chefErr(e))}
+  catch(e){const c=e&&e.code;toast(c==='no_recipe'||c===422?(CLAUDE?'Pas de recette trouvée sur cette page. Copie-colle plutôt le texte.':'Ce site ne présente pas sa recette dans un format lisible : saisis-la dans l’onglet Saisir.'):c===400?'Cette adresse n’est pas acceptée.':c===502||c===415?'Le site n’a pas répondu ou bloque la lecture.':c===404?'La fonction bidou-chef n’est pas encore installée sur Supabase.':chefErr(e))}
   finally{UI.gen=null;renderSheet()}}
 
 const toBuy=i=>!i.staple&&!i.home;

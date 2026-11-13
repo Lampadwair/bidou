@@ -28,6 +28,8 @@ Pour avoir **un compte avec sauvegarde** et **des recettes inventées par Claude
 
 Ta clé Claude reste dans Supabase : elle n'est jamais dans l'appli ni sur GitHub.
 
+**Sans Claude** : mets `claude: false` dans `config.js`. Bidou pioche alors dans sa bibliothèque de plus de 500 recettes ; le frigo, les restes, les courses et l'import par lien marchent pareil. La fonction Supabase reste utile pour l'import par lien, sans clé Claude.
+
 La même fonction sert aussi à **importer une recette depuis un lien** (Marmiton, 750g, blogs…). Cette partie n'a pas besoin de la clé Claude : la fonction lit la recette au format standard des sites de cuisine. Claude n'intervient que si la page n'a pas ce format.
 
 **Mettre à jour la fonction** (quand `index.ts` change) : Supabase → **Edge Functions** → `bidou-chef` → **Code**, remplace tout le code par le nouveau contenu de `supabase/functions/bidou-chef/index.ts`, puis **Deploy**. Les secrets sont conservés.
